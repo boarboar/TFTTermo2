@@ -3,8 +3,10 @@
 
 // Simple general-purpose date/time class (no TZ / DST / leap second handling!)
 class DateTime {
+friend class RTC_DS1302;  
 public:
-    DateTime (uint32_t t =0);
+    DateTime() {;}
+    DateTime (uint32_t t);
     DateTime (uint8_t year, uint8_t month, uint8_t day,
                 uint8_t hour =0, uint8_t min =0, uint8_t sec =0);
     void setTime(uint8_t hour =0, uint8_t min =0, uint8_t sec =0);            

@@ -44,7 +44,10 @@
 #define WS_SENS_TIMEOUT_M 10 // minutes
 
 #define DS18_MEAS_FAIL	9999  // Temporarily!
-//#define TH_NODATA 0x0FFF
+
+// flags - only high bits, low bits reserved for value type
+#define WS_FLAG_RFREAD    0x10
+#define WS_FLAG_ONCEFAIL  0x20
 
 #define WS_NUILEV 7
 #define WS_UI_MAIN  0
@@ -79,6 +82,11 @@
 #define CHART_HEIGHT 204
 #define CHART_TOP 19
 
+#define GETHBHI(B) ((B)>>4)
+#define GETHBLO(B) ((B)&0x0f)
+#define SETHBHI(B, H) (B=(B&0x0f)+((H)<<4))
+#define SETHBLO(B, L) (B=(B&0xf0)+((L)&0x0f))
+
 const char *addr="wserv";
 
 const char *lnames[] = {"main", "stat", "hist", "chart", "chr60", "vcc", "set"};
@@ -96,12 +104,11 @@ RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 TempHistory mHist;
 wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
-uint8_t err=0; // compress
-volatile uint8_t rf_read=0; // flag???
+uint8_t err=0; // compress ?
+volatile uint8_t flags=0;
 
 uint8_t alarms=0;
-//uint8_t alarm_cnt[5]; 
-uint8_t alarm_cnt_na=0; // compress
+//uint8_t alarm_cnt_na=0; // compress
 uint16_t msgcnt=0;
 
 
@@ -109,7 +116,7 @@ uint16_t msgcnt=0;
 int16_t last_tmp=-999, prev_tmp=TH_NODATA;
 int16_t last_vcc=0, prev_vcc=-1;
 //uint32_t last_millis_temp=0; // to sec, int?
-uint16_t last_sec_temp=0; 
+uint16_t last_temp_cnt=0;
 
 // ************************ UI
 
@@ -119,15 +126,18 @@ uint32_t rts=0;
 uint8_t inact_cnt=0; // compress ?
 uint8_t disp_cnt=0;  // compress ?
 
-uint8_t editmode=0; // compress
+uint8_t editmode=0; // 0..4 compress ?
 
-int8_t bt1cnt=0, bt2cnt=0; // compress
-uint8_t uilev=0;   // compress
-uint8_t pageidx=0; // compress
+//int8_t bt1cnt=0, bt2cnt=0; // compress
+int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
-uint8_t chrt=TH_HIST_VAL_T; // compress  (flag)
+uint8_t uilev=0;   // compress ?
 
-// change buf 6, buf 1 4
+uint8_t pageidx=0; // compress ? combine with editmode?
+
+uint8_t chrt=TH_HIST_VAL_T; // compress  (add to flag as LO half)
+
+// change buf 6, buf1 4
 char buf[8];
 char buf1[6];
 
@@ -159,17 +169,16 @@ void setup()
   else dispErr();
  
   mHist.init(); 
-  //last_millis_temp=mui=millis();
   mui=millis();
-  last_sec_temp=mui/1000;
+  //last_sec_temp=mui/1000;
   rts = RTC.now().unixtime();
   updateScreen(true);
 }
 
 void loop()
 {
-  if(rf_read) { 
-   rf_read=0;
+  if(flags&WS_FLAG_RFREAD) {
+   flags &= ~WS_FLAG_RFREAD;
    err=radioRead();  
    if(err) dispErr();
    else {
@@ -181,34 +190,50 @@ void loop()
   unsigned long ms=millis(); 
   if(ms-mui>WS_UI_CYCLE || ms<mui) { // UI cycle
    mui=ms;
-    
+   last_temp_cnt++; 
    if(uilev>0 && !editmode && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=0;
      updateScreen(true);
    }
 
+   /*
    bt1cnt=processClick(BUTTON_1, bt1cnt);
-   bt2cnt=processClick(BUTTON_2, bt2cnt);
-
    if(bt1cnt>WS_BUT_MAX) {
      if(bt1cnt==WS_BUT_CLICK) processShortClick(); 
      else processLongClick();
      bt1cnt=0;
-   }
-          
+   }   
+   bt2cnt=processClick(BUTTON_2, bt2cnt);          
    if(bt2cnt>WS_BUT_MAX) {
      if(bt2cnt==WS_BUT_CLICK) processShortRightClick(); 
      bt2cnt=0;
+   }   
+   */ 
+   
+   uint8_t btcnt_t;
+   btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
+   if(btcnt_t>WS_BUT_MAX) {
+     if(btcnt_t==WS_BUT_CLICK) processShortClick(); 
+     else processLongClick();
+     btcnt_t=0;     
    }
- 
+   SETHBLO(btcnt, btcnt_t);
+   
+   btcnt_t=processClick(BUTTON_2, GETHBHI(btcnt));
+   if(btcnt_t>WS_BUT_MAX) {
+     if(btcnt_t==WS_BUT_CLICK) processShortRightClick(); 
+     btcnt_t=0;     
+   }
+   SETHBHI(btcnt, btcnt_t);
+   
+    
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
 //     if(!(alarms&WS_ALR_TO) && TempHistory::interval_m(last_millis_temp/60000L)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout          
-     if(!(alarms&WS_ALR_TO) && TempHistory::interval_m(last_sec_temp/60)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout          
-       alarms |= WS_ALR_TO;
-       //alarm_cnt[WS_ALR_TO_IDX]++;
-       if(uilev==WS_UI_MAIN) updateScreen(true);       
+       if(!(alarms&WS_ALR_TO) && (uint32_t)last_temp_cnt*WS_UI_CYCLE/60000>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
+         alarms |= WS_ALR_TO;
+         if(uilev==WS_UI_MAIN) updateScreen(true);       
      }
      updateScreenTime(false);       
    }  
@@ -267,6 +292,9 @@ void processLongClick() {
 }
 
 void processShortRightClick() {
+  lcd_defaults();
+  line_init();
+
   if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
     if(++pageidx>=WS_CHART_NLEV) pageidx=0;
     Tft.fillScreen();
@@ -313,7 +341,7 @@ void updateScreen(bool refresh) {
        line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
      }
      
-     if(refresh) updateScreenTime(true);    
+     if(refresh) updateScreenTime(true);   
      }      
      break;
     case WS_UI_HIST: 
@@ -350,15 +378,14 @@ void updateScreenTime(bool reset) {
   
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
-    dispTimeout(millis()/1000-last_sec_temp, reset, 0, 160);
+    dispTimeout((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
   } else if(uilev==WS_UI_SET) {
       if(!editmode) sz=WS_CHAR_TIME_SET_SZ;   
   }
   if(sz) {
     DateTime now = RTC.now();
-    printTime(now, reset, 0, 40, sz/*, true, false*/);   
-  }
-  
+    printTime(now, reset, 0, 40, sz);   
+  }  
 }
 
 // buf 5
@@ -454,11 +481,11 @@ delim: delimeter symbol. shown before every group except of first
 drdrm: always redraw separator (that's for blinking feature); 
 */
 
-void disp_dig(byte redraw, byte ngrp, byte *data, byte *p_data, int x, int y, uint8_t sz/*, char delim, byte drdrm*/) {
+void disp_dig(byte redraw, byte ngrp, byte *data, byte *p_data, int x, int y, uint8_t sz) {
   int posX=x;
   for(byte igrp=0; igrp<ngrp; igrp++) {  
     if(igrp) {
-      if(redraw/* || drdrm*/) 
+      if(redraw) 
         Tft.drawChar(':', posX, y);  
       posX+=FONT_SPACE*sz;
     }
@@ -494,30 +521,23 @@ void hiLightDigit(uint16_t color) {
 /****************** REPORTS ****************/
 
 void printStat() {
-      uint32_t rtdur = RTC.now().unixtime()-rts;
-      //line_init(GREEN, 2);      
-      dispTimeout(millis()/1000, true, 64, line_getpos()); line_print("UPT: ");
-      dispTimeout(rtdur, true, 64, line_getpos()); line_print("RTT: ");
-      mHist.iterBegin();  
-      while(mHist.movePrev());
-      dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, 64, line_getpos()); line_print("DUR: ");
-     
-      line_printn("CNT="); line_printn(itoas(msgcnt)); line_printn(" HSZ="); line_print(itoas(mHist.getSz())); // msgcnt - how many at max???     
-      //line_printn("HP="); line_printn(itoas(mHist._getHeadPtr())); line_printn(" TP="); line_print(itoas(mHist._getTailPtr()));     
-      //line_printn("SHA1="); line_printn(itoas(mHist._getSince1HAcc())); line_printn(" LHAP1="); line_print(itoas(mHist._getLast1HAccPtr()));     
-      //line_printn("SHA3="); line_printn(itoas(mHist._getSince3HAcc())); line_printn(" LHAP3="); line_print(itoas(mHist._getLast3HAccPtr()));     
-
-      for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
-        line_printn("A");line_printn(itoas(i));line_printn("=");
-        if(alarms&(1<<i)) line_print("Y");
-        else line_print("N");
-        //line_print(itoas(alarm_cnt[i]));
-       }  
+   uint32_t rtdur = RTC.now().unixtime()-rts;
+   line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
+   line_printn("RTT: "); dispTimeout(rtdur, true, line_getposx(), line_getpos()); line_print("");
+   mHist.iterBegin();  
+   while(mHist.movePrev());
+   line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
+   line_printn("CNT="); line_printn(itoas(msgcnt)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
+   line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));  
+   for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
+     line_printn("A");line_printn(itoas(i));line_printn("=");
+     if(alarms&(1<<i)) line_print("Y");
+     else line_print("N");
+   }  
 }
        
        
 uint8_t printHist(uint8_t sid, uint8_t idx) {
-  line_init();  
   if(!startIter()) return 0; 
   uint8_t i=0;
   while(i<idx && mHist.movePrev()) i++;
@@ -528,7 +548,7 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
   }  
   do {
     TempHistory::wt_msg_hist *h = mHist.getPrev();
-    line_printn(itoas(i)); //line_printn(" ");    
+    line_printn(itoas(i)); 
     line_setcharpos(4);
     line_printn(printTemp(h->getVal(TH_HIST_VAL_T))); //line_printn(" ");
     line_setcharpos(11);
@@ -716,8 +736,6 @@ void drawVertDashLine(int x, uint16_t color) {
 
 static uint16_t _lp_vpos=0;
 static int16_t _lp_hpos=0;
-//static uint16_t _lp_color=GREEN;
-//static uint8_t _lp_sz=2;
 
 void lcd_defaults() {
   Tft.setBgColor(BLACK);
@@ -727,14 +745,7 @@ void lcd_defaults() {
 }
  
 inline uint16_t line_getpos() { return _lp_vpos; }
-
-/*
-void line_init(uint16_t color, uint8_t sz) {
-  _lp_color=color;
-  _lp_sz=sz;
-  _lp_vpos=_lp_hpos=0;
-}
-*/
+inline uint16_t line_getposx() { return _lp_hpos; }
 
 inline void line_init() {
   _lp_vpos=_lp_hpos=0;
@@ -743,16 +754,8 @@ inline void line_init() {
 void line_print(const char* pbuf) {
   line_printn(pbuf);
   _lp_hpos=0;
-  //_lp_vpos+=FONT_Y*WS_CHAR_DEF_SIZE;
   _lp_vpos+=FONT_Y*Tft.getSize();
 }
-
-/*
-void line_print_at(const char* pbuf, uint16_t x, uint16_t y) {
-  _lp_hpos=x; _lp_vpos=y;
-  line_printn(pbuf);
-}
-*/
 
 inline void line_setpos(uint16_t x, uint16_t y) {
   _lp_hpos=x; _lp_vpos=y;
@@ -771,12 +774,13 @@ void line_printn(const char* pbuf) {
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   last_vcc=pmsg->vcc;
   if(DS18_MEAS_FAIL==pmsg->temp) {
-    alarms |= WS_ALR_BAD_TEMP; /*alarm_cnt[WS_ALR_BAD_TEMP_IDX]++;*/
+    alarms |= WS_ALR_BAD_TEMP;
     return 1;
   }
   msgcnt++;
   last_tmp=pmsg->temp; 
-  last_sec_temp=millis()/1000;
+  //last_sec_temp=millis()/1000;
+  last_temp_cnt=0;
   mHist.addAcc(last_tmp, last_vcc);
   return 0;
 }
@@ -801,9 +805,6 @@ uint8_t radioSetup() {
   else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPower0dBm)) 
     err=5;          
   nrf24.spiWriteRegister(NRF24_REG_00_CONFIG, nrf24.spiReadRegister(NRF24_REG_00_CONFIG)|NRF24_MASK_TX_DS|NRF24_MASK_MAX_RT); // only DR interrupt
-  /*
-  if(err) {alarms |= WS_ALR_WFAIL; alarm_val=err; alarm_cnt[WS_ALR_WFAIL_IDX]++;}
-  */  
   return err;
 }
 
@@ -811,20 +812,29 @@ uint8_t radioRead() {
   err = 0;
   uint8_t len=sizeof(msg); 
   if(!nrf24.available()) { 
-   err=6; alarms |= WS_ALR_WFAIL; //alarm_cnt[WS_ALR_WFAIL_IDX]++;
+   err=6; alarms |= WS_ALR_WFAIL; 
+   /*
    if(++alarm_cnt_na>=3) {
      radioSetup();
      dispStat("RST RAD");
+   }*/
+   if(flags & WS_FLAG_ONCEFAIL) { // double failure, reset radio
+     flags &= ~WS_FLAG_ONCEFAIL;
+     radioSetup();
+     dispStat("RST RAD");     
    }
+   else flags |= WS_FLAG_ONCEFAIL;
    return err;
   }
-  alarm_cnt_na=0;
-  if(!nrf24.recv((uint8_t*)&msg, &len)) { err=7; alarms |= WS_ALR_WFAIL; /*alarm_cnt[WS_ALR_WFAIL_IDX]++;*/ return err;}
-  if(WS_MSG_TEMP != msg.msgt) { err=8; alarms |= WS_ALR_BADMSG; /*alarm_cnt[WS_ALR_BADMSG_IDX]++;*/ return err;}
+  //alarm_cnt_na=0;
+  flags &= ~WS_FLAG_ONCEFAIL;
+  if(!nrf24.recv((uint8_t*)&msg, &len)) { err=7; alarms |= WS_ALR_WFAIL; return err;}
+  if(WS_MSG_TEMP != msg.msgt) { err=8; alarms |= WS_ALR_BADMSG; return err;}
   if(0==addHistAcc(&msg)) alarms = 0; // at the moment
   return err;
 }
 
 void radioIRQ() {
-  rf_read=1; 
+  //rf_read=1; 
+  flags |= WS_FLAG_RFREAD;
 }

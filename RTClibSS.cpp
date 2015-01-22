@@ -143,6 +143,7 @@ void RTC_DS1302::adjust(const DateTime& dt) {
 }
 
 DateTime RTC_DS1302::now() {
+  /*
   uint8_t ss = readRegisterBcdToDec(kSecondReg, 6);
   uint8_t mm = readRegisterBcdToDec(kMinuteReg);
   uint8_t hh = readRegister(kHourReg);
@@ -157,6 +158,21 @@ DateTime RTC_DS1302::now() {
   //uint16_t y = 2000 + readRegisterBcdToDec(kYearReg);
   uint8_t y = readRegisterBcdToDec(kYearReg);
   return DateTime (y, m, d, hh, mm, ss);
+  */
+  DateTime d;
+  d.ss = readRegisterBcdToDec(kSecondReg, 6);
+  d.mm = readRegisterBcdToDec(kMinuteReg);
+  d.hh = readRegister(kHourReg);
+  uint8_t adj;
+  if (d.hh & 128)  // 12-hour mode
+    adj = 12 * ((d.hh & 32) >> 5);
+  else           // 24-hour mode
+    adj = 10 * ((d.hh & (32 + 16)) >> 4);
+  d.hh = (d.hh & 15) + adj;
+  d.d = readRegisterBcdToDec(kDateReg, 5);
+  d.m = readRegisterBcdToDec(kMonthReg, 4);
+  d.yOff = readRegisterBcdToDec(kYearReg);
+  return d;
 }
 
 void RTC_DS1302::writeProtect(const bool enable) {
