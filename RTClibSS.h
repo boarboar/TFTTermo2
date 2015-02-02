@@ -6,10 +6,11 @@ class DateTime {
 friend class RTC_DS1302;  
 public:
     DateTime() {;}
-    DateTime (uint32_t t);
+    //DateTime (uint32_t t);
     DateTime (uint8_t year, uint8_t month, uint8_t day,
                 uint8_t hour =0, uint8_t min =0, uint8_t sec =0);
-    void setTime(uint8_t hour =0, uint8_t min =0, uint8_t sec =0);            
+    void setTime(uint8_t hour =0, uint8_t min =0, uint8_t sec =0);    
+    void shiftMins(int16_t m);    
     //DateTime (const char* date, const char* time);
     
     

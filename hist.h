@@ -1,9 +1,9 @@
 
 // effective storage is TH_HIST_SZ-1
 //#define TH_HIST_SZ  12
-#define TH_HIST_SZ  14
+#define TH_HIST_SZ  17
 //#define TH_HIST_SZ  254 
-#define TH_ACC_TIME  15 //mins
+#define TH_ACC_TIME  14 //mins
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2
 #define TH_HIST_VAL_T 0
@@ -40,6 +40,9 @@ public:
     void iterBegin();
     boolean movePrev(); 
     wt_msg_hist *getPrev() { return hist+iter_ptr; }
+    inline boolean isHead() {return !iter_ptr;} 
+//    inline boolean isOver() ( return iter_ptr<TH_HIST_SZ && hist[iter_ptr].mins!=TH_EMPTY; }
+    inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && hist[iter_ptr].mins!=TH_EMPTY;} 
     uint16_t     getPrevMinsBefore() { return iter_mbefore; }
     static uint8_t interval_m(uint8_t prev);
 protected:

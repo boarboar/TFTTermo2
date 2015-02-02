@@ -34,7 +34,7 @@ static long time2long(uint16_t days, uint8_t h, uint8_t m, uint8_t s) {
 ////////////////////////////////////////////////////////////////////////////////
 // DateTime implementation - ignores time zones and DST changes
 // NOTE: also ignores leap seconds, see http://en.wikipedia.org/wiki/Leap_second
-
+/*
 DateTime::DateTime (uint32_t t) {
     t -= SECONDS_FROM_1970_TO_2000;    // bring to 2000 timestamp from 1970
 
@@ -61,6 +61,7 @@ DateTime::DateTime (uint32_t t) {
     }
     d = days + 1;
 }
+*/
 /*
 DateTime::DateTime (uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec) {
     if (year >= 2000)
@@ -89,6 +90,35 @@ void DateTime::setTime (uint8_t hour, uint8_t min, uint8_t sec) {
     ss = sec;
 }
 
+void DateTime::shiftMins(int16_t md) {
+  uint32_t t = date2days(yOff, m, d);
+  t=time2long(t, hh, mm, ss);
+  t=t+60*md;
+  
+    ss = t % 60;
+    t /= 60;
+    mm = t % 60;
+    t /= 60;
+    hh = t % 24;
+    uint16_t days = t / 24;
+    uint8_t leap;
+    for (yOff = 0; ; ++yOff) {
+        leap = yOff % 4 == 0;
+        if (days < 365 + leap)
+            break;
+        days -= 365 + leap;
+    }
+    for (m = 1; ; ++m) {
+        uint8_t daysPerMonth = daysInMonth[m - 1];
+        if (leap && m == 2)
+            ++daysPerMonth;
+        if (days < daysPerMonth)
+            break;
+        days -= daysPerMonth;
+    }
+    d = days + 1;
+}
+
 /*
 uint8_t DateTime::dayOfWeek() const {    
     uint16_t day = date2days(yOff, m, d);
@@ -96,14 +126,7 @@ uint8_t DateTime::dayOfWeek() const {
 }
 */
 
-uint32_t DateTime::unixtime(void) const {
-  /*
-  uint32_t t;
-  uint16_t days = date2days(yOff, m, d);
-  t = time2long(days, hh, mm, ss);
-  t += SECONDS_FROM_1970_TO_2000;  // seconds from 1970 to 2000
-  return t;
-  */
+uint32_t DateTime::unixtime(void) const {  
   uint16_t days = date2days(yOff, m, d);
   return time2long(days, hh, mm, ss)+SECONDS_FROM_1970_TO_2000;
 }
@@ -130,6 +153,8 @@ void RTC_DS1302::adjust(const DateTime& dt) {
   // Initialize a new chip by turning off write protection and clearing the
   // clock halt flag. These methods needn't always be called. See the DS1302
   // datasheet for details.
+  
+  /*
   writeProtect(false);
   halt(false);
   writeRegisterDecToBcd(kSecondReg, dt.second(), 6);
@@ -140,25 +165,20 @@ void RTC_DS1302::adjust(const DateTime& dt) {
   writeRegisterDecToBcd(kMonthReg, dt.month(), 4);
   //writeRegisterDecToBcd(kDayReg, dofweek, 2);
   writeRegisterDecToBcd(kYearReg, dt.year()); // year-2000
+  */
+  writeProtect(false);
+  halt(false);
+  writeRegisterDecToBcd(kSecondReg, dt.ss, 6);
+  writeRegisterDecToBcd(kMinuteReg, dt.mm, 6);
+  writeRegister(kHourReg, 0);  // set 24-hour mode
+  writeRegisterDecToBcd(kHourReg, dt.hh, 5);
+  writeRegisterDecToBcd(kDateReg, dt.d, 5);
+  writeRegisterDecToBcd(kMonthReg, dt.m, 4);
+  //writeRegisterDecToBcd(kDayReg, dofweek, 2);
+  writeRegisterDecToBcd(kYearReg, dt.yOff); // year-2000 
 }
 
 DateTime RTC_DS1302::now() {
-  /*
-  uint8_t ss = readRegisterBcdToDec(kSecondReg, 6);
-  uint8_t mm = readRegisterBcdToDec(kMinuteReg);
-  uint8_t hh = readRegister(kHourReg);
-  uint8_t adj;
-  if (hh & 128)  // 12-hour mode
-    adj = 12 * ((hh & 32) >> 5);
-  else           // 24-hour mode
-    adj = 10 * ((hh & (32 + 16)) >> 4);
-  hh = (hh & 15) + adj;
-  uint8_t d = readRegisterBcdToDec(kDateReg, 5);
-  uint8_t m = readRegisterBcdToDec(kMonthReg, 4);
-  //uint16_t y = 2000 + readRegisterBcdToDec(kYearReg);
-  uint8_t y = readRegisterBcdToDec(kYearReg);
-  return DateTime (y, m, d, hh, mm, ss);
-  */
   DateTime d;
   d.ss = readRegisterBcdToDec(kSecondReg, 6);
   d.mm = readRegisterBcdToDec(kMinuteReg);
@@ -172,6 +192,9 @@ DateTime RTC_DS1302::now() {
   d.d = readRegisterBcdToDec(kDateReg, 5);
   d.m = readRegisterBcdToDec(kMonthReg, 4);
   d.yOff = readRegisterBcdToDec(kYearReg);
+  
+  if(d.yOff>32) d.yOff=15; // workaround ... remove it later
+  
   return d;
 }
 

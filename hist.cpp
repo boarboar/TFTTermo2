@@ -32,7 +32,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc) {
     // test implementation...
     uint8_t cnt, mins_th;
     i=0; mins_th=mins; // start at head with 15 minutes   
-    while(mins_th<70) {
+    while(mins_th<122) {
       cnt=0;
       while(i<TH_HIST_SZ && hist[i].mins!=TH_EMPTY && hist[i].mins<mins_th+10) { i++; cnt++; }
       if(cnt>2) {
@@ -40,7 +40,6 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc) {
         hist[i].temp=(hist[i].temp+hist[i+1].temp)/2;
         hist[i].vcc=(hist[i].vcc+hist[i+1].vcc)/2;
         hist[i].mins=mins_th=hist[i].mins+hist[i+1].mins;
-        //for(++i; i<TH_HIST_SZ-1; i++) hist[i]=hist[i+1]; // shift tail left
         for(cnt=i+1; cnt<TH_HIST_SZ-1; cnt++) hist[cnt]=hist[cnt+1]; // shift tail left // reuse cnt 
         hist[TH_HIST_SZ-1].mins=TH_EMPTY; //!!! now vacant
       } else break;

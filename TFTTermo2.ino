@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <NRF24.h>
+#include "NRF24.h"
 #include "RTClibSS.h"
 #include "TFT_ILI9341.h"
 #include "hist.h"
@@ -87,6 +87,12 @@
 #define SETHBHI(B, H) (B=(B&0x0f)+((H)<<4))
 #define SETHBLO(B, L) (B=(B&0xf0)+((L)&0x0f))
 
+//#define SETERR(E)   SETHBLO(flags, (E))
+//#define GETERR()   GETHBLO(flags)
+
+#define SETCHRT(T)   SETHBLO(flags, (T))
+#define GETCHRT()   GETHBLO(flags)
+
 const char *addr="wserv";
 
 const char *lnames[] = {"main", "stat", "hist", "chart", "chr60", "vcc", "set"};
@@ -104,11 +110,10 @@ RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 TempHistory mHist;
 wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
-uint8_t err=0; // compress ?
+uint8_t err=0; 
 volatile uint8_t flags=0;
 
 uint8_t alarms=0;
-//uint8_t alarm_cnt_na=0; // compress
 uint16_t msgcnt=0;
 
 
@@ -128,18 +133,26 @@ uint8_t disp_cnt=0;  // compress ?
 
 uint8_t editmode=0; // 0..4 compress ?
 
-//int8_t bt1cnt=0, bt2cnt=0; // compress
 int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
 uint8_t uilev=0;   // compress ?
-
 uint8_t pageidx=0; // compress ? combine with editmode?
+//uint8_t chrt=TH_HIST_VAL_T; // compress  (add to flag as LO half)
 
-uint8_t chrt=TH_HIST_VAL_T; // compress  (add to flag as LO half)
+uint16_t _lp_vpos=0;
+int16_t _lp_hpos=0;
+
+int16_t mint, maxt; // this is for charting
 
 // change buf 6, buf1 4
+/*
 char buf[8];
 char buf1[6];
+*/
+char buf[6];
+char buf1[4];
+
+// UNIONIZE!!! msg, buf, local time etc...
 
 void setup()
 {
@@ -161,7 +174,7 @@ void setup()
   RTC.begin();
   
   dispStat("INIT NRF");
-  err = radioSetup();
+  radioSetup();
   pinMode(NRF_IRQ_PIN, INPUT);  
   attachInterrupt(NRF_IRQ_PIN, radioIRQ, FALLING); 
   
@@ -170,7 +183,7 @@ void setup()
  
   mHist.init(); 
   mui=millis();
-  //last_sec_temp=mui/1000;
+  
   rts = RTC.now().unixtime();
   updateScreen(true);
 }
@@ -179,7 +192,7 @@ void loop()
 {
   if(flags&WS_FLAG_RFREAD) {
    flags &= ~WS_FLAG_RFREAD;
-   err=radioRead();  
+   radioRead();  
    if(err) dispErr();
    else {
      updateScreen(false);
@@ -195,21 +208,6 @@ void loop()
      uilev=0;
      updateScreen(true);
    }
-
-   /*
-   bt1cnt=processClick(BUTTON_1, bt1cnt);
-   if(bt1cnt>WS_BUT_MAX) {
-     if(bt1cnt==WS_BUT_CLICK) processShortClick(); 
-     else processLongClick();
-     bt1cnt=0;
-   }   
-   bt2cnt=processClick(BUTTON_2, bt2cnt);          
-   if(bt2cnt>WS_BUT_MAX) {
-     if(bt2cnt==WS_BUT_CLICK) processShortRightClick(); 
-     bt2cnt=0;
-   }   
-   */ 
-   
    uint8_t btcnt_t;
    btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
    if(btcnt_t>WS_BUT_MAX) {
@@ -230,7 +228,6 @@ void loop()
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
-//     if(!(alarms&WS_ALR_TO) && TempHistory::interval_m(last_millis_temp/60000L)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout          
        if(!(alarms&WS_ALR_TO) && (uint32_t)last_temp_cnt*WS_UI_CYCLE/60000>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen(true);       
@@ -298,7 +295,8 @@ void processShortRightClick() {
   if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
     if(++pageidx>=WS_CHART_NLEV) pageidx=0;
     Tft.fillScreen();
-    chartHist(1, pageidx, chrt);
+    //chartHist(1, pageidx, chrt);
+    chartHist(1, pageidx, GETCHRT());
     return;
   }
   if(uilev==WS_UI_HIST) {
@@ -349,8 +347,8 @@ void updateScreen(bool refresh) {
       break;    
     case WS_UI_CHART: {
       pageidx=0;
-      chrt=TH_HIST_VAL_T;
-      chartHist(1, pageidx, chrt);
+      SETCHRT(TH_HIST_VAL_T);
+      chartHist(1, pageidx, TH_HIST_VAL_T);
       }
       break; 
     case WS_UI_CHART60: 
@@ -358,8 +356,8 @@ void updateScreen(bool refresh) {
       break;
     case WS_UI_CHART_VCC: {
       pageidx=0;
-      chrt=TH_HIST_VAL_V;
-      chartHist(1, pageidx, chrt);
+      SETCHRT(TH_HIST_VAL_V);
+      chartHist(1, pageidx, TH_HIST_VAL_V);
       }
       break;     
     case WS_UI_STAT: 
@@ -521,13 +519,19 @@ void hiLightDigit(uint16_t color) {
 /****************** REPORTS ****************/
 
 void printStat() {
-   uint32_t rtdur = RTC.now().unixtime()-rts;
+   //uint32_t rtdur = RTC.now().unixtime()-rts;
+   DateTime now=RTC.now(); 
+   line_printn("NOW: "); line_printn(itoas(now.day())); line_printn("/"); line_printn(itoas(now.month())); line_printn("/"); line_print(itoas(now.year()));
    line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
-   line_printn("RTT: "); dispTimeout(rtdur, true, line_getposx(), line_getpos()); line_print("");
+   //line_printn("RTT: "); dispTimeout(rtdur, true, line_getposx(), line_getpos()); line_print("");
+   line_printn("RTT: "); dispTimeout(now.unixtime()-rts, true, line_getposx(), line_getpos()); line_print("");
    mHist.iterBegin();  
    while(mHist.movePrev());
    line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
-   line_printn("CNT="); line_printn(itoas(msgcnt)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
+   line_printn("CNT="); 
+   line_printn(itoa(msgcnt, buf, 10));
+   //line_printn(itoas(msgcnt)); 
+   line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
    line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));  
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
@@ -564,49 +568,47 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   uint8_t chart_xstep_denom = chart_xstep_denoms[scale];
-  int16_t mint, maxt;
   uint16_t mbefore;
+  prepChart(type, (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
+  if(maxt==mint) return;
   
-  int16_t tdiff=prepChart(&mint, &maxt, type, (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
-  if(!tdiff)  return;
-
   mbefore=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
  
-  int16_t xr;     
+  int16_t xr, x0;     
   xr=(int32_t)mbefore/chart_xstep_denom;
   if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1;
   
   drawVertDashLine(xr, BLUE);
 
-  if(xr>36) { // draw midnight line  
+  if(xr>36) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
-    int16_t x1;
     while(mid<mbefore) {
-      x1=xr-(int32_t)mid/chart_xstep_denom;
-      if(x1>0) drawVertDashLine(x1, YELLOW);
+      x0=xr-(int32_t)mid/chart_xstep_denom;
+      if(x0>0) drawVertDashLine(x0, YELLOW);
       mid+=1440; // mins in 24h
     }
-    DateTime start=DateTime(now.unixtime()-(uint32_t)mHist.getPrevMinsBefore()*60);
-    printTime(start, true, 0, 224, 2);  
+    //DateTime start=DateTime(now.unixtime()-(uint32_t)mbefore*60);
+    //printTime(start, true, 0, 224, 2);  
+    now.shiftMins(-mbefore);
+    printTime(now, true, 0, 224, 2);  
   }
- 
-  uint8_t cnt=0;
-  int16_t y0, x0;
+  {
+  int16_t y0;
   x0=y0=0;
   mHist.iterBegin(); mHist.movePrev();
   Tft.setColor(CYAN);
   Tft.setThick(5);
   do {
-    int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(type))*CHART_HEIGHT/tdiff;
+    int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(type))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-    if(cnt)  {
-     if(x1>0 && x0>0) 
+    if(!mHist.isHead()) {  
+     if(x1>=0 && x0>0) 
        Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
     }    
     x0=x1; y0=y1;
-    cnt++;
   } while(mHist.movePrev() && x0>0);     
+  }
 }
 
 void chartHist60(uint8_t sid) 
@@ -616,37 +618,56 @@ void chartHist60(uint8_t sid)
   const int xstep = CHART_WIDTH/DUR_24;
 
   { // histogramm scope
-  int16_t mint, maxt;
-   
-  int16_t tdiff=prepChart(&mint, &maxt, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
-  if(!tdiff) return;
+  prepChart(TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
+  if(maxt==mint) return;
   
-  int y_z=(int32_t)maxt*CHART_HEIGHT/tdiff; // from top
+  int16_t y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
   
   int16_t acc=0;
   uint8_t cnt=0;  
   uint8_t islot=0;
-
+//line_init();
   Tft.setBgColor(WHITE);  
   mHist.iterBegin();  
   do {
-    uint8_t is=mHist.movePrev() ? mHist.getPrevMinsBefore()/DUR_MIN : DUR_24;
+    //uint8_t is=mHist.movePrev() ? mHist.getPrevMinsBefore()/DUR_MIN : DUR_24;
+    //uint8_t is=mHist.movePrev() ? mHist.getPrevMinsBefore()/DUR_MIN : islot+1; // wrong! always getprevmins...    
+    uint8_t is;
+    if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
+    else { is=mHist.getPrevMinsBefore()/DUR_MIN; if(is==islot) is=islot+1; }
+    if(is>DUR_24) is=DUR_24;
     if(is!=islot) {  
       // draw prev;
       if(cnt) {
-        int val=acc/cnt;
-        int y0=y_z;
-        int h;
-        if(val<0) {
-          if(maxt<0) { y0=0; h=maxt-val; } else { h=-val; }
+        acc/=cnt;
+        int16_t y0=y_z;        
+        int16_t h;
+        if(acc<0) {
+          if(maxt<0) { y0=0; h=maxt-acc; } else { h=-acc; } 
         }
         else {
-          if(mint>0) { y0=CHART_HEIGHT; h=val-mint;} else {h=val; }
+          if(mint>0) { y0=CHART_HEIGHT; h=acc-mint;} else {h=acc; }
         }
-        h=(int32_t)h*CHART_HEIGHT/tdiff;
-        if(val>0) y0-=h;     
-        int16_t x=CHART_WIDTH-xstep*(islot+1); 
-        Tft.fillRectangle(x+1, CHART_TOP+y0, xstep-2, h);
+        h=(int32_t)h*CHART_HEIGHT/(maxt-mint);
+        if(acc>0) y0-=h;     
+        
+        //Tft.fillRectangle(CHART_WIDTH-xstep*(islot+1)+1, CHART_TOP+y0, xstep-2, h);
+        /*
+        // 24 0 10 38
+           line_printn(itoa(is, buf, 10));
+           line_printn(" ");
+           line_printn(itoa(islot, buf, 10));
+           line_printn(" ");
+           line_printn(itoa(xstep, buf, 10));
+           line_printn(" ");
+           line_printn(itoa(xstep*(is-islot)-2, buf, 10));
+           line_print(" ;");
+        */
+        //Tft.fillRectangle(CHART_WIDTH-xstep*(is+1)+1, CHART_TOP+y0, xstep*(is-islot)-2, h); //!!!
+        acc=CHART_WIDTH-xstep*is+1;
+        if(acc>=0)
+          Tft.fillRectangle(acc, CHART_TOP+y0, xstep*(is-islot)-2, h);
+
       }      
       islot=is;
       acc=0;
@@ -654,7 +675,8 @@ void chartHist60(uint8_t sid)
     }    
     acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
     cnt++;          
-  } while(islot<DUR_24); 
+  //} while(islot<DUR_24); 
+  } while(mHist.isNotOver() && islot<DUR_24); // is<24
   
   }
   
@@ -681,17 +703,14 @@ int8_t startIter() {
 }
 
 
-int16_t prepChart(int16_t *ptmint, int16_t *ptmaxt, uint8_t type, uint16_t mbefore) {
-  
-  if(!startIter()) return 0;  
-  int16_t mint, maxt;
+void prepChart(uint8_t type, uint16_t mbefore) {
+  if(!startIter()) return;  
   maxt=mint=mHist.getPrev()->getVal(type);
   do {
     int16_t t = mHist.getPrev()->getVal(type);
     if(t>maxt) maxt=t;
     if(t<mint) mint=t;
   } while(mHist.movePrev() && mHist.getPrevMinsBefore()<mbefore);
-
 
   line_init();
   line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
@@ -705,14 +724,14 @@ int16_t prepChart(int16_t *ptmint, int16_t *ptmaxt, uint8_t type, uint16_t mbefo
      else maxt=(maxt/50)*50;
   }  
   if(maxt==mint) {mint-=50; maxt+=50;}  
-  int16_t tdiff=maxt-mint;
   
   Tft.setColor(WHITE); 
   Tft.drawRectangle(0, CHART_TOP, CHART_WIDTH, CHART_HEIGHT);
   int16_t y0;  
+//  uint8_t y0;
   y0=(maxt-mint)>100 ? 50 : 10;  
   for(int16_t ig=mint; ig<=maxt; ig+=y0) { // degree lines
-     int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/tdiff;
+     int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
      //if(ig>mint && ig<maxt) Tft.drawStraightDashedLine(LCD_HORIZONTAL, 0, yl, CHART_WIDTH, ig==0? BLUE : GREEN, BLACK, 0x0f);
      if(ig>mint && ig<maxt) {
        Tft.setColor(ig==0? BLUE : GREEN);
@@ -721,9 +740,6 @@ int16_t prepChart(int16_t *ptmint, int16_t *ptmaxt, uint8_t type, uint16_t mbefo
      lcd_defaults();
      line_setpos(CHART_WIDTH+1, yl-FONT_Y); line_printn(printVal(type,ig));
   }
-  *ptmaxt=maxt;
-  *ptmint=mint;
-  return tdiff;
 }
 
 
@@ -732,10 +748,6 @@ void drawVertDashLine(int x, uint16_t color) {
   Tft.drawVerticalLine(x, CHART_TOP, CHART_HEIGHT);
   //Tft.drawStraightDashedLine(LCD_VERTICAL, x, CHART_TOP, CHART_HEIGHT, color,BLACK, 0x0f); // 
 }
-
-
-static uint16_t _lp_vpos=0;
-static int16_t _lp_hpos=0;
 
 void lcd_defaults() {
   Tft.setBgColor(BLACK);
@@ -779,7 +791,6 @@ uint8_t addHistAcc(struct wt_msg *pmsg) {
   }
   msgcnt++;
   last_tmp=pmsg->temp; 
-  //last_sec_temp=millis()/1000;
   last_temp_cnt=0;
   mHist.addAcc(last_tmp, last_vcc);
   return 0;
@@ -792,46 +803,35 @@ char *itoas(uint8_t i) {
 
 /****************** RADIO ****************/
 
-uint8_t radioSetup() {
-  if (!nrf24.init())
-    err=1;
-  else if (!nrf24.setChannel(WS_CHAN))
-    err=2;
-  else if (!nrf24.setThisAddress((uint8_t*)addr, strlen(addr)))
-    err=3;
-  else if (!nrf24.setPayloadSize(sizeof(wt_msg)))
-    err=4;
+void radioSetup() {
+  if (!nrf24.init()) err=1;
+  else if (!nrf24.setChannel(WS_CHAN)) err=2;
+  else if (!nrf24.setThisAddress((uint8_t*)addr, strlen(addr))) err=3;
+  else if (!nrf24.setPayloadSize(sizeof(wt_msg))) err=4;
   //else if (!nrf24.setRF(NRF24::NRF24DataRate2Mbps, NRF24::NRF24TransmitPower0dBm))
-  else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPower0dBm)) 
-    err=5;          
-  nrf24.spiWriteRegister(NRF24_REG_00_CONFIG, nrf24.spiReadRegister(NRF24_REG_00_CONFIG)|NRF24_MASK_TX_DS|NRF24_MASK_MAX_RT); // only DR interrupt
-  return err;
+  else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPower0dBm)) err=5;          
+  else { 
+    nrf24.spiWriteRegister(NRF24_REG_00_CONFIG, nrf24.spiReadRegister(NRF24_REG_00_CONFIG)|NRF24_MASK_TX_DS|NRF24_MASK_MAX_RT); // only DR interrupt
+    err=0;
+  }  
 }
 
-uint8_t radioRead() {
-  err = 0;
+void radioRead() {
   uint8_t len=sizeof(msg); 
   if(!nrf24.available()) { 
    err=6; alarms |= WS_ALR_WFAIL; 
-   /*
-   if(++alarm_cnt_na>=3) {
-     radioSetup();
-     dispStat("RST RAD");
-   }*/
    if(flags & WS_FLAG_ONCEFAIL) { // double failure, reset radio
      flags &= ~WS_FLAG_ONCEFAIL;
      radioSetup();
      dispStat("RST RAD");     
    }
    else flags |= WS_FLAG_ONCEFAIL;
-   return err;
+  } else {
+    flags &= ~WS_FLAG_ONCEFAIL;
+    if(!nrf24.recv((uint8_t*)&msg, &len)) { err=7; alarms |= WS_ALR_WFAIL;}
+    else if(WS_MSG_TEMP != msg.msgt) { err=8; alarms |= WS_ALR_BADMSG;}
+    else if(0==addHistAcc(&msg)) {err=0; alarms = 0;} // at the moment 
   }
-  //alarm_cnt_na=0;
-  flags &= ~WS_FLAG_ONCEFAIL;
-  if(!nrf24.recv((uint8_t*)&msg, &len)) { err=7; alarms |= WS_ALR_WFAIL; return err;}
-  if(WS_MSG_TEMP != msg.msgt) { err=8; alarms |= WS_ALR_BADMSG; return err;}
-  if(0==addHistAcc(&msg)) alarms = 0; // at the moment
-  return err;
 }
 
 void radioIRQ() {
