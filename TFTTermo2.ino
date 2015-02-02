@@ -4,6 +4,9 @@
 #include "TFT_ILI9341.h"
 #include "hist.h"
 
+
+// git push -u origin master //
+
 // 5523 PINOUT
 
 // SCK  P1_5
