@@ -637,7 +637,8 @@ void chartHist60(uint8_t sid)
     //uint8_t is=mHist.movePrev() ? mHist.getPrevMinsBefore()/DUR_MIN : islot+1; // wrong! always getprevmins...    
     uint8_t is;
     if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
-    else { is=mHist.getPrevMinsBefore()/DUR_MIN; if(is==islot) is=islot+1; }
+    //else { is=mHist.getPrevMinsBefore()/DUR_MIN; if(is==islot) is=islot+1; }
+    else break;
     if(is>DUR_24) is=DUR_24;
     if(is!=islot) {  
       // draw prev;
