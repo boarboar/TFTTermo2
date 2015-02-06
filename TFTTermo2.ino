@@ -450,6 +450,10 @@ void printTime(const DateTime& pDT, bool reset, int x, int y, int sz/*, bool bli
   lcd_defaults();
 }
 
+void printDate(const DateTime& pDT) {
+ line_printn(itoas(pDT.day())); line_printn("/"); line_printn(itoas(pDT.month())); line_printn("/"); line_print(itoas(pDT.year()));
+}
+
 void timeUp(uint8_t dig, int sz) {
   uint8_t ig=dig/2;
   uint8_t id=(dig+1)%2; 
@@ -524,7 +528,8 @@ void hiLightDigit(uint16_t color) {
 void printStat() {
    //uint32_t rtdur = RTC.now().unixtime()-rts;
    DateTime now=RTC.now(); 
-   line_printn("NOW: "); line_printn(itoas(now.day())); line_printn("/"); line_printn(itoas(now.month())); line_printn("/"); line_print(itoas(now.year()));
+   line_printn("NOW: "); //line_printn(itoas(now.day())); line_printn("/"); line_printn(itoas(now.month())); line_printn("/"); line_print(itoas(now.year()));
+   printDate(now);
    line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
    //line_printn("RTT: "); dispTimeout(rtdur, true, line_getposx(), line_getpos()); line_print("");
    line_printn("RTT: "); dispTimeout(now.unixtime()-rts, true, line_getposx(), line_getpos()); line_print("");
@@ -589,12 +594,16 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
     while(mid<mbefore) {
       x0=xr-(int32_t)mid/chart_xstep_denom;
       if(x0>0) drawVertDashLine(x0, YELLOW);
+      lcd_defaults();  
+      now.shiftMins(-mid); 
+      line_setpos(x0, 224);
+      printDate(now);
       mid+=1440; // mins in 24h
     }
     //DateTime start=DateTime(now.unixtime()-(uint32_t)mbefore*60);
     //printTime(start, true, 0, 224, 2);  
-    now.shiftMins(-mbefore);
-    printTime(now, true, 0, 224, 2);  
+    //now.shiftMins(-mbefore); 
+    //printTime(now, true, 0, 224, 2);  // no sense to display this!!! print date instead    
   }
   {
   int16_t y0;
