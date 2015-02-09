@@ -20,11 +20,13 @@ public:
     uint8_t day() const         { return d; }
     uint8_t hour() const        { return hh; }
     uint8_t minute() const      { return mm; }
-    uint8_t second() const      { return ss; }
+    uint8_t second() const      { return ss; }    
+    uint8_t dayOfWeek() const;
+    const char *dayOfWeekStr() const;
     
-    //uint8_t dayOfWeek() const;
     // 32-bit times as seconds since 1/1/1970
     uint32_t unixtime(void) const;
+    
 protected:
     // save as unixtime!!!!
     uint8_t yOff, m, d, hh, mm, ss;

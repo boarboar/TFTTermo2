@@ -451,7 +451,7 @@ void printTime(const DateTime& pDT, bool reset, int x, int y, int sz/*, bool bli
 }
 
 void printDate(const DateTime& pDT) {
- line_printn(itoas(pDT.day())); line_printn("/"); line_printn(itoas(pDT.month())); line_printn("/"); line_print(itoas(pDT.year()));
+ line_printn(itoas(pDT.day())); line_printn("/"); line_printn(itoas(pDT.month())); line_printn("/"); line_printn(itoas(pDT.year()));
 }
 
 void timeUp(uint8_t dig, int sz) {
@@ -529,7 +529,7 @@ void printStat() {
    //uint32_t rtdur = RTC.now().unixtime()-rts;
    DateTime now=RTC.now(); 
    line_printn("NOW: "); //line_printn(itoas(now.day())); line_printn("/"); line_printn(itoas(now.month())); line_printn("/"); line_print(itoas(now.year()));
-   printDate(now);
+   printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
    line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
    //line_printn("RTT: "); dispTimeout(rtdur, true, line_getposx(), line_getpos()); line_print("");
    line_printn("RTT: "); dispTimeout(now.unixtime()-rts, true, line_getposx(), line_getpos()); line_print("");

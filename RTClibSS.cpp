@@ -119,18 +119,22 @@ void DateTime::shiftMins(int16_t md) {
     d = days + 1;
 }
 
-/*
 uint8_t DateTime::dayOfWeek() const {    
     uint16_t day = date2days(yOff, m, d);
     return (day + 6) % 7; // Jan 1, 2000 is a Saturday, i.e. returns 6
 }
-*/
 
 uint32_t DateTime::unixtime(void) const {  
   uint16_t days = date2days(yOff, m, d);
   return time2long(days, hh, mm, ss)+SECONDS_FROM_1970_TO_2000;
 }
 
+
+const char *DateTime::dayOfWeekStr() const {
+  const static char* wds[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fra", "Sat"};
+  return wds[dayOfWeek()];
+}
+    
 ////////////////////////////////////////////////////////////////////////////////
 // RTC_DS1307 implementation
 
