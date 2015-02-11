@@ -44,6 +44,7 @@ public:
 //    inline boolean isOver() ( return iter_ptr<TH_HIST_SZ && hist[iter_ptr].mins!=TH_EMPTY; }
     inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && hist[iter_ptr].mins!=TH_EMPTY;} 
     uint16_t     getPrevMinsBefore() { return iter_mbefore; }
+    inline uint8_t  getHeadDelay() { interval_m(acc_prev_time_m); }
     static uint8_t interval_m(uint8_t prev);
 protected:
     uint16_t compress(uint8_t level);

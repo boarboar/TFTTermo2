@@ -6,7 +6,7 @@
 // 0 = head/latest -> TH_HIST_SZ-1 = tail/oldest
 // 
 
-uint8_t  TempHistory::interval_m(uint8_t  prev) {
+uint8_t  TempHistory::interval_m(uint8_t  prev) { //won't work if > 255 mins...
   uint8_t ms=millis()/60000L;
   if(ms>=prev) return ms-prev;
   return (~prev)+ms;
