@@ -540,7 +540,7 @@ void printStat() {
    line_printn(itoa(msgcnt, buf, 10));
    //line_printn(itoas(msgcnt)); 
    line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
-   line_printn(" HDL="); line_print(itoas(mHist.getHeadDelay()));
+   line_printn("HDL="); line_print(itoas(mHist.getHeadDelay()));
    line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));  
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
