@@ -520,22 +520,17 @@ void hiLightDigit(uint16_t color) {
 /****************** REPORTS ****************/
 
 void printStat() {
-   //uint32_t rtdur = RTC.now().unixtime()-rts;
    DateTime now=RTC.now(); 
-   line_printn("NOW: "); //line_printn(itoas(now.day())); line_printn("/"); line_printn(itoas(now.month())); line_printn("/"); line_print(itoas(now.year()));
-   printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
+   line_printn("NOW: "); printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
    line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
-   //line_printn("RTT: "); dispTimeout(rtdur, true, line_getposx(), line_getpos()); line_print("");
    line_printn("RTT: "); dispTimeout(now.unixtime()-rts, true, line_getposx(), line_getpos()); line_print("");
    mHist.iterBegin();  
    while(mHist.movePrev());
    line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
-   line_printn("CNT="); 
-   line_printn(itoa(msgcnt, buf, 10));
-   //line_printn(itoas(msgcnt)); 
-   line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
-   line_printn("HDL="); line_print(itoas(mHist.getHeadDelay()));
+   line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
+   line_printn("HDL="); line_print(itoas(mHist.getHeadDelay()));   
    line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));  
+   line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
      if(alarms&(1<<i)) line_print("Y");
