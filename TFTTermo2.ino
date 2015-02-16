@@ -4,6 +4,7 @@
 #include "TFT_ILI9341.h"
 #include "hist.h"
 
+//TODO - get rid of buf1 in itoas
 
 // git push -u origin master //
 
@@ -90,9 +91,6 @@
 #define SETHBHI(B, H) (B=(B&0x0f)+((H)<<4))
 #define SETHBLO(B, L) (B=(B&0xf0)+((L)&0x0f))
 
-//#define SETERR(E)   SETHBLO(flags, (E))
-//#define GETERR()   GETHBLO(flags)
-
 #define SETCHRT(T)   SETHBLO(flags, (T))
 #define GETCHRT()   GETHBLO(flags)
 
@@ -114,16 +112,14 @@ TempHistory mHist;
 wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
 uint8_t err=0; 
-volatile uint8_t flags=0;
+volatile uint8_t flags=0; // chart type encoded in LO half
 
 uint8_t alarms=0;
 uint16_t msgcnt=0;
 
-
 // ************************ HIST
 int16_t last_tmp=-999, prev_tmp=TH_NODATA;
 int16_t last_vcc=0, prev_vcc=-1;
-//uint32_t last_millis_temp=0; // to sec, int?
 uint16_t last_temp_cnt=0;
 
 // ************************ UI
@@ -140,18 +136,12 @@ int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
 uint8_t uilev=0;   // compress ?
 uint8_t pageidx=0; // compress ? combine with editmode?
-//uint8_t chrt=TH_HIST_VAL_T; // compress  (add to flag as LO half)
 
 uint16_t _lp_vpos=0;
 int16_t _lp_hpos=0;
 
 int16_t mint, maxt; // this is for charting
 
-// change buf 6, buf1 4
-/*
-char buf[8];
-char buf1[6];
-*/
 char buf[6];
 char buf1[4];
 
@@ -399,7 +389,9 @@ char *printTemp(int16_t disptemp) {
   buf[0]=s; 
   itoa((uint8_t)(disptemp/10), buf+1, 10);
   strcat(buf, ".");
-  return strcat(buf, itoas((uint8_t)(disptemp%10)));
+  //return strcat(buf, itoas((uint8_t)(disptemp%10)));
+  itoa((uint8_t)(disptemp%10), buf+strlen(buf), 10);
+  return buf;
 } 
 
 // buf 4
@@ -407,7 +399,9 @@ char *printVcc(int16_t vcc) {
   itoa((uint8_t)(vcc/100), buf, 10);
   strcat(buf, ".");
   if(vcc%100<10) strcat(buf, "0");
-  return strcat(buf, itoas((uint8_t)(vcc%100)));
+  //return strcat(buf, itoas((uint8_t)(vcc%100)));
+  itoa((uint8_t)(vcc%100), buf+strlen(buf), 10);
+  return buf;
 }
 
 char *printVal(uint8_t type, int16_t val) {
@@ -597,11 +591,12 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
       x0=xr-(int32_t)mid/chart_xstep_denom;
       if(x0>0) drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
-      now.shiftMins(-mid); 
+      //now.shiftMins(-mid); 
       line_setpos(x0, 224);
       //printDate(now)
       line_printn(now.dayOfWeekStr());
       mid+=1440; // mins in 24h
+      now.shiftMins(-1440);
     }
     //DateTime start=DateTime(now.unixtime()-(uint32_t)mbefore*60);
     //printTime(start, true, 0, 224, 2);  
@@ -645,11 +640,8 @@ void chartHist60(uint8_t sid)
   Tft.setBgColor(WHITE);  
   mHist.iterBegin();  
   do {
-    //uint8_t is=mHist.movePrev() ? mHist.getPrevMinsBefore()/DUR_MIN : DUR_24;
-    //uint8_t is=mHist.movePrev() ? mHist.getPrevMinsBefore()/DUR_MIN : islot+1; // wrong! always getprevmins...    
     uint8_t is;
     if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
-    //else { is=mHist.getPrevMinsBefore()/DUR_MIN; if(is==islot) is=islot+1; }
     else break;
     if(is>DUR_24) is=DUR_24;
     if(is!=islot) {  
@@ -666,20 +658,18 @@ void chartHist60(uint8_t sid)
         }
         h=(int32_t)h*CHART_HEIGHT/(maxt-mint);
         if(acc>0) y0-=h;     
-        
-        //Tft.fillRectangle(CHART_WIDTH-xstep*(islot+1)+1, CHART_TOP+y0, xstep-2, h);
         /*
         // 24 0 10 38
            line_printn(itoa(is, buf, 10));
            line_printn(" ");
            line_printn(itoa(islot, buf, 10));
            line_printn(" ");
-           line_printn(itoa(xstep, buf, 10));
-           line_printn(" ");
-           line_printn(itoa(xstep*(is-islot)-2, buf, 10));
+           //line_printn(itoa(xstep, buf, 10));
+           //line_printn(" ");
+           //line_printn(itoa(xstep*(is-islot)-2, buf, 10));
+           line_printn(itoas(is-islot)));
            line_print(" ;");
         */
-        //Tft.fillRectangle(CHART_WIDTH-xstep*(is+1)+1, CHART_TOP+y0, xstep*(is-islot)-2, h); //!!!
         acc=CHART_WIDTH-xstep*is+1;
         if(acc>=0)
           Tft.fillRectangle(acc, CHART_TOP+y0, xstep*(is-islot)-2, h);
@@ -744,7 +734,6 @@ void prepChart(uint8_t type, uint16_t mbefore) {
   Tft.setColor(WHITE); 
   Tft.drawRectangle(0, CHART_TOP, CHART_WIDTH, CHART_HEIGHT);
   int16_t y0;  
-//  uint8_t y0;
   y0=(maxt-mint)>100 ? 50 : 10;  
   for(int16_t ig=mint; ig<=maxt; ig+=y0) { // degree lines
      int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
@@ -824,7 +813,6 @@ void radioSetup() {
   else if (!nrf24.setChannel(WS_CHAN)) err=2;
   else if (!nrf24.setThisAddress((uint8_t*)addr, strlen(addr))) err=3;
   else if (!nrf24.setPayloadSize(sizeof(wt_msg))) err=4;
-  //else if (!nrf24.setRF(NRF24::NRF24DataRate2Mbps, NRF24::NRF24TransmitPower0dBm))
   else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPower0dBm)) err=5;          
   else { 
     nrf24.spiWriteRegister(NRF24_REG_00_CONFIG, nrf24.spiReadRegister(NRF24_REG_00_CONFIG)|NRF24_MASK_TX_DS|NRF24_MASK_MAX_RT); // only DR interrupt

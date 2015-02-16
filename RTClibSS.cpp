@@ -131,7 +131,7 @@ uint32_t DateTime::unixtime(void) const {
 
 
 const char *DateTime::dayOfWeekStr() const {
-  const static char* wds[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fra", "Sat"};
+  const static char* wds[7] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
   return wds[dayOfWeek()];
 }
     
