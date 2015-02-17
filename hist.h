@@ -16,11 +16,13 @@
 
 class TempHistory {
 public:
-  class wt_msg_hist {
+  class wt_msg_hist { // 4 bytes
     public:
     int16_t getVal(uint8_t type) { return type==TH_HIST_VAL_T ? temp*TH_HIST_DV_T : vcc*TH_HIST_DV_V; }
- //   uint8_t sid;  // src
-    uint8_t mins; // mins since previous put
+    //uint8_t sid;  // src
+    //uint8_t mins; // mins since previous put (0..254). 0xFF=empty slot
+    uint16_t mins : 12; // mins since previous pu (0..254*16). 0xFFF=empty slot
+    uint8_t sid : 4;  // src 0..15
     int8_t temp;    
     uint8_t vcc;    
   };

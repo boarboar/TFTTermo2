@@ -143,7 +143,7 @@ int16_t _lp_hpos=0;
 int16_t mint, maxt; // this is for charting
 
 char buf[6];
-char buf1[4];
+//char buf1[4];
 
 // UNIONIZE!!! msg, buf, local time etc...
 
@@ -552,11 +552,12 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
     TempHistory::wt_msg_hist *h = mHist.getPrev();
     line_printn(itoas(i)); 
     line_setcharpos(4);
-    line_printn(printTemp(h->getVal(TH_HIST_VAL_T))); //line_printn(" ");
+    line_printn(printTemp(h->getVal(TH_HIST_VAL_T))); 
     line_setcharpos(11);
-    line_printn(printVcc(h->getVal(TH_HIST_VAL_V))); //line_printn(" ");    
+    line_printn(printVcc(h->getVal(TH_HIST_VAL_V))); 
     line_setcharpos(16);
-    line_print(itoas(h->mins)); 
+    //line_print(itoas(h->mins)); 
+    line_print(itoa(h->mins, buf, 10));
     i++;    
     } while(mHist.movePrev() && line_getpos()<230);
   return i;  
@@ -588,8 +589,8 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
       lcd_defaults();  
       //now.shiftMins(-mid); 
       line_setpos(x0, 224);
-      //printDate(now)
-      line_printn(now.dayOfWeekStr());
+      printDate(now);
+      //line_printn(now.dayOfWeekStr());
       mid+=1440; // mins in 24h
       now.shiftMins(-1440);
     }
@@ -797,7 +798,8 @@ uint8_t addHistAcc(struct wt_msg *pmsg) {
 }
 
 char *itoas(uint8_t i) {
-  return itoa(i, buf1, 10);
+  //return itoa(i, buf1, 10);
+  return itoa(i, buf, 10);
 }
 
 
