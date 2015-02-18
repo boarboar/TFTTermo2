@@ -11,6 +11,7 @@
 // utility code, some of this could be exposed in the DateTime API if needed
 
 const uint8_t daysInMonth [] = { 31,28,31,30,31,30,31,31,30,31,30,31 }; //has to be const or compiler compaints
+const static char* weekDays[7]={"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
 
 // number of days since 2000/01/01, valid for 2001..2099
 /*
@@ -30,6 +31,8 @@ static uint16_t date2days(uint8_t y, uint8_t m, uint8_t d) {
 static long time2long(uint16_t days, uint8_t h, uint8_t m, uint8_t s) {
     return ((days * 24L + h) * 60 + m) * 60 + s;
 }
+
+const char *DateTime::dayOfWeekStr(uint8_t dw) { return weekDays[dw]; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // DateTime implementation - ignores time zones and DST changes
@@ -90,6 +93,7 @@ void DateTime::setTime (uint8_t hour, uint8_t min, uint8_t sec) {
     ss = sec;
 }
 
+/*
 void DateTime::shiftMins(int16_t md) {
   uint32_t t = date2days(yOff, m, d);
   t=time2long(t, hh, mm, ss);
@@ -118,6 +122,7 @@ void DateTime::shiftMins(int16_t md) {
     }
     d = days + 1;
 }
+*/
 
 uint8_t DateTime::dayOfWeek() const {    
     uint16_t day = date2days(yOff, m, d);
@@ -131,8 +136,8 @@ uint32_t DateTime::unixtime(void) const {
 
 
 const char *DateTime::dayOfWeekStr() const {
-  const static char* wds[7] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
-  return wds[dayOfWeek()];
+  //const static char* wds[7] = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+  return weekDays[dayOfWeek()];
 }
     
 ////////////////////////////////////////////////////////////////////////////////

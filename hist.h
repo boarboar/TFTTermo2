@@ -1,7 +1,7 @@
 
 // effective storage is TH_HIST_SZ-1
-//#define TH_HIST_SZ  21
-#define TH_HIST_SZ  24
+//#define TH_HIST_SZ  24
+#define TH_HIST_SZ  10 // just to test
 //#define TH_HIST_SZ  254 
 #define TH_ACC_TIME  14 //mins
 #define TH_HIST_DV_T  5
@@ -10,7 +10,13 @@
 #define TH_HIST_VAL_V 1
 
 #define TH_NODATA 0x0FFF
-#define TH_EMPTY 0xFF
+//#define TH_SEMPTY 0xFF
+#define TH_SEMPTY 0xFFF
+//#define TH_ROLLUP_THR 122
+#define TH_ROLLUP_THR 244
+
+#define TH_SETEMPTY(I) (hist[I].mins=TH_SEMPTY)
+#define TH_ISEMPTY(I)  (hist[I].mins==TH_SEMPTY)
 
 // uint16_t max: 65535 mins = 1092 hours = 45 days
 
@@ -43,8 +49,7 @@ public:
     boolean movePrev(); 
     wt_msg_hist *getPrev() { return hist+iter_ptr; }
     inline boolean isHead() {return !iter_ptr;} 
-//    inline boolean isOver() ( return iter_ptr<TH_HIST_SZ && hist[iter_ptr].mins!=TH_EMPTY; }
-    inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && hist[iter_ptr].mins!=TH_EMPTY;} 
+    inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr);} 
     uint16_t     getPrevMinsBefore() { return iter_mbefore; }
     inline uint8_t  getHeadDelay() { return interval_m(acc_prev_time_m); }
     static uint8_t interval_m(uint8_t prev);

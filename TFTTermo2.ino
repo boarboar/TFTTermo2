@@ -580,24 +580,23 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
   drawVertDashLine(xr, BLUE);
 
   //if(xr>36) { // draw midnight lines  // do something with this block. Too many local vars!
-  if(xr>20) { // draw midnight lines  // do something with this block. Too many local vars!
+  if(xr>16) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
+    uint8_t dw=now.dayOfWeek();
+    // note - now is not needed anymore
     while(mid<mbefore) {
       x0=xr-(int32_t)mid/chart_xstep_denom;
       if(x0>0) drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       //now.shiftMins(-mid); 
       line_setpos(x0, 224);
-      printDate(now);
-      //line_printn(now.dayOfWeekStr());
+      //printDate(now);
+      line_printn(now.dayOfWeekStr(dw));
       mid+=1440; // mins in 24h
-      now.shiftMins(-1440);
+      //now.shiftMins(-1440);
+      if(dw) dw--; else dw=7;
     }
-    //DateTime start=DateTime(now.unixtime()-(uint32_t)mbefore*60);
-    //printTime(start, true, 0, 224, 2);  
-    //now.shiftMins(-mbefore); 
-    //printTime(now, true, 0, 224, 2);  // no sense to display this!!! print date instead    
   }
   {
   int16_t y0;
@@ -656,15 +655,9 @@ void chartHist60(uint8_t sid)
         if(acc>0) y0-=h;     
         /*
         // 24 0 10 38
-           line_printn(itoa(is, buf, 10));
-           line_printn(" ");
-           line_printn(itoa(islot, buf, 10));
-           line_printn(" ");
-           //line_printn(itoa(xstep, buf, 10));
-           //line_printn(" ");
-           //line_printn(itoa(xstep*(is-islot)-2, buf, 10));
-           line_printn(itoas(is-islot)));
-           line_print(" ;");
+           line_printn(itoa(is, buf, 10)); line_printn(" "); line_printn(itoa(islot, buf, 10)); line_printn(" ");
+           //line_printn(itoa(xstep, buf, 10)); line_printn(" "); line_printn(itoa(xstep*(is-islot)-2, buf, 10));
+           line_printn(itoas(is-islot))); line_print(" ;");
         */
         acc=CHART_WIDTH-xstep*is+1;
         if(acc>=0)

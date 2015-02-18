@@ -10,7 +10,7 @@ public:
     DateTime (uint8_t year, uint8_t month, uint8_t day,
                 uint8_t hour =0, uint8_t min =0, uint8_t sec =0);
     void setTime(uint8_t hour =0, uint8_t min =0, uint8_t sec =0);    
-    void shiftMins(int16_t m);    
+    //void shiftMins(int16_t m);    
     //DateTime (const char* date, const char* time);
     
     
@@ -27,6 +27,7 @@ public:
     // 32-bit times as seconds since 1/1/1970
     uint32_t unixtime(void) const;
     
+    static const char *dayOfWeekStr(uint8_t dw);
 protected:
     // save as unixtime!!!!
     uint8_t yOff, m, d, hh, mm, ss;
