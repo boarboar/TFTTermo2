@@ -4,7 +4,10 @@
 #include "TFT_ILI9341.h"
 #include "hist.h"
 
-//TODO - get rid of buf1 in itoas
+//TODO 
+// if hist>=25, failure to render vcc chart. I guess problem is in hist (before vcc)
+// hist corrupted as well (>1)
+
 
 // git push -u origin master //
 
