@@ -27,13 +27,11 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc) {
   acc.cnt++;
   acc.temp+=temp;
   acc.vcc+=vcc;
-  //uint8_t mins=interval_m(acc_prev_time_m); //time lapsed from previous storage
   mins=interval_m(acc_prev_time_m); //time lapsed from previous storage
   if(mins>=TH_ACC_TIME) { 
     // add to hist 
     // compress first
     // test implementation...
-    //uint8_t cnt, mins_th;    
     i=0; mins_th=mins; // start at head with 15 minutes   
     while(mins_th<TH_ROLLUP_THR) {
       cnt=0;
@@ -83,4 +81,12 @@ uint8_t TempHistory::getSz() {
   uint8_t i=0;
   while(i<TH_HIST_SZ && !TH_ISEMPTY(i)) i++;
   return i;
+}
+
+uint8_t TempHistory::check() {
+  uint8_t i=0;
+  while(i<TH_HIST_SZ && !TH_ISEMPTY(i)) i++;
+  if(i==TH_HIST_SZ) return 0;
+  while(i<TH_HIST_SZ && TH_ISEMPTY(i)) i++;
+  return TH_HIST_SZ-i;
 }

@@ -146,7 +146,6 @@ int16_t _lp_hpos=0;
 int16_t mint, maxt; // this is for charting
 
 char buf[6];
-//char buf1[4];
 
 // UNIONIZE!!! msg, buf, local time etc...
 
@@ -392,7 +391,6 @@ char *printTemp(int16_t disptemp) {
   buf[0]=s; 
   itoa((uint8_t)(disptemp/10), buf+1, 10);
   strcat(buf, ".");
-  //return strcat(buf, itoas((uint8_t)(disptemp%10)));
   itoa((uint8_t)(disptemp%10), buf+strlen(buf), 10);
   return buf;
 } 
@@ -402,7 +400,6 @@ char *printVcc(int16_t vcc) {
   itoa((uint8_t)(vcc/100), buf, 10);
   strcat(buf, ".");
   if(vcc%100<10) strcat(buf, "0");
-  //return strcat(buf, itoas((uint8_t)(vcc%100)));
   itoa((uint8_t)(vcc%100), buf+strlen(buf), 10);
   return buf;
 }
@@ -532,8 +529,9 @@ void printStat() {
    line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
    line_printn("HDL="); line_print(itoas(mHist.getHeadDelay()));   
-   line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));  
-   line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
+   line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));
+   line_printn("CHK="); line_print(itoas(mHist.check()));  
+   //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
      if(alarms&(1<<i)) line_print("Y");
@@ -582,7 +580,6 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
   
   drawVertDashLine(xr, BLUE);
 
-  //if(xr>36) { // draw midnight lines  // do something with this block. Too many local vars!
   if(xr>16) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
@@ -601,6 +598,7 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
       if(dw) dw--; else dw=7;
     }
   }
+  
   {
   int16_t y0;
   x0=y0=0;
@@ -610,13 +608,18 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
   do {
     int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(type))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
+    // CP3 +++
+    
     if(!mHist.isHead()) {  
      if(x1>=0 && x0>0) 
        Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
-    }    
+    } 
+    
+   // CP3 ---    
     x0=x1; y0=y1;
-  } while(mHist.movePrev() && x0>0);     
+  } while(mHist.movePrev() && x0>0);
   }
+  
 }
 
 void chartHist60(uint8_t sid) 
@@ -628,15 +631,14 @@ void chartHist60(uint8_t sid)
   { // histogramm scope
   prepChart(TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
   if(maxt==mint) return;
-  
+
   int16_t y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
   
   int16_t acc=0;
   uint8_t cnt=0;  
   uint8_t islot=0;
-//line_init();
   Tft.setBgColor(WHITE);  
-  mHist.iterBegin();  
+  mHist.iterBegin();
   do {
     uint8_t is;
     if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
@@ -656,16 +658,9 @@ void chartHist60(uint8_t sid)
         }
         h=(int32_t)h*CHART_HEIGHT/(maxt-mint);
         if(acc>0) y0-=h;     
-        /*
-        // 24 0 10 38
-           line_printn(itoa(is, buf, 10)); line_printn(" "); line_printn(itoa(islot, buf, 10)); line_printn(" ");
-           //line_printn(itoa(xstep, buf, 10)); line_printn(" "); line_printn(itoa(xstep*(is-islot)-2, buf, 10));
-           line_printn(itoas(is-islot))); line_print(" ;");
-        */
         acc=CHART_WIDTH-xstep*is+1;
         if(acc>=0)
           Tft.fillRectangle(acc, CHART_TOP+y0, xstep*(is-islot)-2, h);
-
       }      
       islot=is;
       acc=0;
@@ -673,11 +668,8 @@ void chartHist60(uint8_t sid)
     }    
     acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
     cnt++;          
-  //} while(islot<DUR_24); 
-  } while(mHist.isNotOver() && islot<DUR_24); // is<24
-  
-  }
-  
+  } while(mHist.isNotOver() && islot<DUR_24); // is<24  
+  }  
   { // time labels scope
   lcd_defaults();
   DateTime now = RTC.now();  
@@ -687,7 +679,6 @@ void chartHist60(uint8_t sid)
   mid=mid>12 ? mid-12 : mid+12;
   drawVertDashLine(CHART_WIDTH-xstep*mid, RED); // draw noon line
   }
-  
 }
 
 
@@ -794,7 +785,6 @@ uint8_t addHistAcc(struct wt_msg *pmsg) {
 }
 
 char *itoas(uint8_t i) {
-  //return itoa(i, buf1, 10);
   return itoa(i, buf, 10);
 }
 
@@ -832,6 +822,5 @@ void radioRead() {
 }
 
 void radioIRQ() {
-  //rf_read=1; 
   flags |= WS_FLAG_RFREAD;
 }

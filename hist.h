@@ -25,8 +25,6 @@ public:
   class wt_msg_hist { // 4 bytes
     public:
     int16_t getVal(uint8_t type) { return type==TH_HIST_VAL_T ? temp*TH_HIST_DV_T : vcc*TH_HIST_DV_V; }
-    //uint8_t sid;  // src
-    //uint8_t mins; // mins since previous put (0..254). 0xFF=empty slot
     uint16_t mins : 12; // mins since previous pu (0..254*16). 0xFFF=empty slot
     uint8_t sid : 4;  // src 0..15
     int8_t temp;    
@@ -43,7 +41,7 @@ public:
     void init();
     boolean addAcc(int16_t temp, int16_t vcc);
     int16_t getDiff(int16_t val, uint8_t sid);
-     uint8_t getSz();
+    uint8_t getSz();
     wt_msg_hist *getData() { return hist; }
     void iterBegin();
     boolean movePrev(); 
@@ -52,6 +50,7 @@ public:
     inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr);} 
     uint16_t     getPrevMinsBefore() { return iter_mbefore; }
     inline uint8_t  getHeadDelay() { return interval_m(acc_prev_time_m); }
+    uint8_t check(); // check if corrupted 
     static uint8_t interval_m(uint8_t prev);
 protected:
     uint16_t compress(uint8_t level);
