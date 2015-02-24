@@ -213,21 +213,22 @@ void TFT::drawStraightDashedLine(INT8U dir, INT16 poX, INT16 poY, INT16U length)
 void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
 {   
     int16_t dx, dy;
-    int16_t sx, sy;
+    int16_t sx, sy; // too much vars on stack... do something... dx,dy,sx,sy are fixed through thr loop... 
     
     if(x0<x1) {dx=x1-x0; sx=1;} else {dx=x0-x1; sx=-1; }
     if(y0<y1) {dy=y0-y1; sy=1;} else {dy=y1-y0; sy=-1; }
     
-    int16_t err = dx+dy, e2;                                                /* error value e_xy             */
+    int16_t err = dx+dy; /* error value e_xy             */
+    //int16_t  e2;                                                
     INT8U th2=_size_mask_thick/2;
     for (;;){                                                           /* loop                         */
-        e2 = 2*err;
-        if (e2 >= dy) {                   /* e_xy+e_x > 0                 */
+        //e2 = 2*err;
+        if (2*err >= dy) {                   /* e_xy+e_x > 0                 */
             drawVerticalLine(x0, y0-th2, _size_mask_thick);
             if (x0 == x1) break;
             err += dy; x0 += sx;
         }
-        if (e2 <= dx) {                   /* e_xy+e_y < 0                 */
+        if (2*err <= dx) {                   /* e_xy+e_y < 0                 */
             drawHorizontalLine(x0-th2, y0, _size_mask_thick/*, color*/);
             if (y0 == y1) break;
             err += dx; y0 += sy;

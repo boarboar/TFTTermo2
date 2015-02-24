@@ -112,7 +112,22 @@ NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
 RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 
 TempHistory mHist;
-wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
+//wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
+
+struct {
+  uint8_t btcnt_1:4;
+  uint8_t btcnt_2:4;
+  // uint8_t err:4;
+  // uint8_t flags:4;  // redefine flags!!!
+  // uint8_t chartType: 2;
+  // uint8_t editmode: 4;
+  // uint8_t uilev: 4;
+  // uint8_t pageidx: 4;
+  // uint8_t disp_cnt: 4;
+  // uint8_t inact_cnt: 6;
+  // uint16_t lp_vpos: 12;
+  // uint16_t hp_vpos: 12;
+} state = {0, 0};
 
 uint8_t err=0; 
 volatile uint8_t flags=0; // chart type encoded in LO half
@@ -135,13 +150,13 @@ uint8_t disp_cnt=0;  // compress ?
 
 uint8_t editmode=0; // 0..4 compress ?
 
-int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
+//int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
 uint8_t uilev=0;   // compress ?
 uint8_t pageidx=0; // compress ? combine with editmode?
 
-uint16_t _lp_vpos=0;
-int16_t _lp_hpos=0;
+uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
+int16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
 int16_t mint, maxt; // this is for charting
 
@@ -203,6 +218,7 @@ void loop()
      uilev=0;
      updateScreen(true);
    }
+   /*
    uint8_t btcnt_t;
    btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
    if(btcnt_t>WS_BUT_MAX) {
@@ -218,7 +234,22 @@ void loop()
      btcnt_t=0;     
    }
    SETHBHI(btcnt, btcnt_t);
+   */
+   uint8_t btcnt_t;
+   btcnt_t=processClick(BUTTON_1, state.btcnt_1);
+   if(btcnt_t>WS_BUT_MAX) {
+     if(btcnt_t==WS_BUT_CLICK) processShortClick(); 
+     else processLongClick();
+     btcnt_t=0;     
+   }
+   state.btcnt_1=btcnt_t;
    
+   btcnt_t=processClick(BUTTON_2, state.btcnt_2);
+   if(btcnt_t>WS_BUT_MAX) {
+     if(btcnt_t==WS_BUT_CLICK) processShortRightClick(); 
+     btcnt_t=0;     
+   }
+   state.btcnt_2=btcnt_t;
     
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
@@ -557,7 +588,6 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
     line_setcharpos(11);
     line_printn(printVcc(h->getVal(TH_HIST_VAL_V))); 
     line_setcharpos(16);
-    //line_print(itoas(h->mins)); 
     line_print(itoa(h->mins, buf, 10));
     i++;    
     } while(mHist.movePrev() && line_getpos()<230);
@@ -568,18 +598,17 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   uint8_t chart_xstep_denom = chart_xstep_denoms[scale];
-  uint16_t mbefore;
+  //uint16_t mbefore;
   prepChart(type, (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
   if(maxt==mint) return;
-  
-  mbefore=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
  
   int16_t xr, x0;     
-  xr=(int32_t)mbefore/chart_xstep_denom;
-  if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1;
   
   drawVertDashLine(xr, BLUE);
-
+  {
+  uint16_t mbefore=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
+  xr=(int32_t)mbefore/chart_xstep_denom;
+  if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1;  
   if(xr>16) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
@@ -598,7 +627,7 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
       if(dw) dw--; else dw=7;
     }
   }
-  
+  }
   {
   int16_t y0;
   x0=y0=0;
@@ -804,6 +833,7 @@ void radioSetup() {
 }
 
 void radioRead() {
+  wt_msg msg;
   uint8_t len=sizeof(msg); 
   if(!nrf24.available()) { 
    err=6; alarms |= WS_ALR_WFAIL; 
