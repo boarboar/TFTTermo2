@@ -209,7 +209,7 @@ void TFT::drawStraightDashedLine(INT8U dir, INT16 poX, INT16 poY, INT16U length)
     while(length--) sendData((_size_mask_thick>>(length&0x07))&0x01 ? _fgColor : _bgColor);
 }
 */
-
+/*
 void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
 {   
     int16_t dx, dy;
@@ -218,20 +218,45 @@ void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
     if(x0<x1) {dx=x1-x0; sx=1;} else {dx=x0-x1; sx=-1; }
     if(y0<y1) {dy=y0-y1; sy=1;} else {dy=y1-y0; sy=-1; }
     
-    int16_t err = dx+dy; /* error value e_xy             */
+    int16_t err = dx+dy; // error value e_xy            
     //int16_t  e2;                                                
     INT8U th2=_size_mask_thick/2;
-    for (;;){                                                           /* loop                         */
+    for (;;){                                                          
         //e2 = 2*err;
-        if (2*err >= dy) {                   /* e_xy+e_x > 0                 */
+        if (2*err >= dy) {                   // e_xy+e_x > 0                 
             drawVerticalLine(x0, y0-th2, _size_mask_thick);
             if (x0 == x1) break;
             err += dy; x0 += sx;
         }
-        if (2*err <= dx) {                   /* e_xy+e_y < 0                 */
-            drawHorizontalLine(x0-th2, y0, _size_mask_thick/*, color*/);
+        if (2*err <= dx) {                   // e_xy+e_y < 0                 
+            drawHorizontalLine(x0-th2, y0, _size_mask_thick);
             if (y0 == y1) break;
             err += dx; y0 += sy;
+        }
+    }
+}
+*/
+
+void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
+{   
+    int16_t dx, dy;
+    if(x0>=x1) {dx=x1; x1=x0; x0=dx; dy=y1; y1=y0; y0=dy;}
+    dx=x1-x0;    
+    if(y0<y1) dy=y0-y1; else dy=y1-y0;
+    
+    int16_t err = dx+dy; // error value e_xy            
+    INT8U th2=_size_mask_thick/2;
+    for (;;){                                                          
+        if (2*err >= dy) {                   // e_xy+e_x > 0                 
+            drawVerticalLine(x0, y0-th2, _size_mask_thick);
+            if (x0 == x1) break;
+            err += dy; x0++;
+        }
+        if (2*err <= dx) {                   // e_xy+e_y < 0                 
+            drawHorizontalLine(x0-th2, y0, _size_mask_thick);
+            if (y0 == y1) break;
+            err += dx; 
+            if(y0<y1) y0++; else y0--;
         }
     }
 }

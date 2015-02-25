@@ -53,8 +53,13 @@
 #define DS18_MEAS_FAIL	9999  // Temporarily!
 
 // flags - only high bits, low bits reserved for value type
+
 #define WS_FLAG_RFREAD    0x10
 #define WS_FLAG_ONCEFAIL  0x20
+/*
+#define WS_FLAG_RFREAD    0x01
+#define WS_FLAG_ONCEFAIL  0x02
+*/
 
 #define WS_NUILEV 7
 #define WS_UI_MAIN  0
@@ -112,14 +117,16 @@ NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
 RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 
 TempHistory mHist;
-//wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
+wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
+/*
+// state vars....
 struct {
   uint8_t btcnt_1:4;
   uint8_t btcnt_2:4;
   // uint8_t err:4;
-  // uint8_t flags:4;  // redefine flags!!!
-  // uint8_t chartType: 2;
+  //uint8_t flags:4;  
+  //uint8_t chrt: 4;
   // uint8_t editmode: 4;
   // uint8_t uilev: 4;
   // uint8_t pageidx: 4;
@@ -128,6 +135,7 @@ struct {
   // uint16_t lp_vpos: 12;
   // uint16_t hp_vpos: 12;
 } state = {0, 0};
+*/
 
 uint8_t err=0; 
 volatile uint8_t flags=0; // chart type encoded in LO half
@@ -136,8 +144,12 @@ uint8_t alarms=0;
 uint16_t msgcnt=0;
 
 // ************************ HIST
-int16_t last_tmp=-999, prev_tmp=TH_NODATA;
-int16_t last_vcc=0, prev_vcc=-1;
+int16_t last_tmp=-999;
+//int16_t prev_tmp=TH_NODATA;
+int16_t last_vcc=0;
+//int16_t prev_vcc=-1;
+uint8_t tmp_chg_vector=0, vcc_chg_vector=0;
+
 uint16_t last_temp_cnt=0;
 
 // ************************ UI
@@ -150,16 +162,17 @@ uint8_t disp_cnt=0;  // compress ?
 
 uint8_t editmode=0; // 0..4 compress ?
 
-//int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
+int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
-uint8_t uilev=0;   // compress ?
+uint8_t uilev=WS_UI_MAIN;   // compress ?
 uint8_t pageidx=0; // compress ? combine with editmode?
 
 uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
 int16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
-int16_t mint, maxt; // this is for charting
+// trancient vars
 
+int16_t mint, maxt; // this is for charting
 char buf[6];
 
 // UNIONIZE!!! msg, buf, local time etc...
@@ -214,11 +227,11 @@ void loop()
   if(ms-mui>WS_UI_CYCLE || ms<mui) { // UI cycle
    mui=ms;
    last_temp_cnt++; 
-   if(uilev>0 && !editmode && !inact_cnt) {  // back to main screen after user inactivity timeout
-     uilev=0;
+   if(uilev!=WS_UI_MAIN && !editmode && !inact_cnt) {  // back to main screen after user inactivity timeout
+     uilev=WS_UI_MAIN;
      updateScreen(true);
    }
-   /*
+   
    uint8_t btcnt_t;
    btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
    if(btcnt_t>WS_BUT_MAX) {
@@ -234,7 +247,8 @@ void loop()
      btcnt_t=0;     
    }
    SETHBHI(btcnt, btcnt_t);
-   */
+   
+   /*
    uint8_t btcnt_t;
    btcnt_t=processClick(BUTTON_1, state.btcnt_1);
    if(btcnt_t>WS_BUT_MAX) {
@@ -250,7 +264,8 @@ void loop()
      btcnt_t=0;     
    }
    state.btcnt_2=btcnt_t;
-    
+   */
+   
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
@@ -320,9 +335,8 @@ void processShortRightClick() {
 
   if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
     if(++pageidx>=WS_CHART_NLEV) pageidx=0;
-    Tft.fillScreen();
-    //chartHist(1, pageidx, chrt);
-    chartHist(1, pageidx, GETCHRT());
+    Tft.fillScreen();    
+    chartHist(1/*, pageidx, GETCHRT()*/);
     return;
   }
   if(uilev==WS_UI_HIST) {
@@ -347,8 +361,9 @@ void updateScreen(bool refresh) {
    
   switch(uilev) {
     case WS_UI_MAIN: {      
-     if((prev_tmp!=last_tmp || refresh) && last_tmp!=TH_NODATA) { 
-       prev_tmp=last_tmp;
+     if((/*prev_tmp!=last_tmp*/tmp_chg_vector || refresh) && last_tmp!=TH_NODATA) { 
+       //prev_tmp=last_tmp;
+       tmp_chg_vector=0;
        int16_t t;
        Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
        Tft.setSize(WS_CHAR_TEMP_SZ);
@@ -360,8 +375,9 @@ void updateScreen(bool refresh) {
        Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*7, 80);    
        lcd_defaults();
      }
-     if(prev_vcc!=last_vcc || refresh) {
-       prev_vcc=last_vcc;
+     if(/*prev_vcc!=last_vcc*/vcc_chg_vector || refresh) {
+       //prev_vcc=last_vcc;
+       vcc_chg_vector=0;
        line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
      }
      
@@ -374,7 +390,7 @@ void updateScreen(bool refresh) {
     case WS_UI_CHART: {
       pageidx=0;
       SETCHRT(TH_HIST_VAL_T);
-      chartHist(1, pageidx, TH_HIST_VAL_T);
+      chartHist(1/*, pageidx, TH_HIST_VAL_T*/);
       }
       break; 
     case WS_UI_CHART60: 
@@ -383,7 +399,7 @@ void updateScreen(bool refresh) {
     case WS_UI_CHART_VCC: {
       pageidx=0;
       SETCHRT(TH_HIST_VAL_V);
-      chartHist(1, pageidx, TH_HIST_VAL_V);
+      chartHist(1/*, pageidx, TH_HIST_VAL_V*/);
       }
       break;     
     case WS_UI_STAT: 
@@ -595,11 +611,10 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 }
 
 
-void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {    
+void chartHist(uint8_t sid/*uint8_t scale, uint8_t type*/) {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
-  uint8_t chart_xstep_denom = chart_xstep_denoms[scale];
-  //uint16_t mbefore;
-  prepChart(type, (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
+  uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
+  prepChart(GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
   if(maxt==mint) return;
  
   int16_t xr, x0;     
@@ -635,7 +650,7 @@ void chartHist(uint8_t sid, uint8_t scale, uint8_t type) {
   Tft.setColor(CYAN);
   Tft.setThick(5);
   do {
-    int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(type))*CHART_HEIGHT/(maxt-mint);
+    int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
     // CP3 +++
     
@@ -801,14 +816,16 @@ void line_printn(const char* pbuf) {
 /****************** HIST ****************/
 
 uint8_t addHistAcc(struct wt_msg *pmsg) {
+  if(last_vcc!=pmsg->vcc) vcc_chg_vector=1;
   last_vcc=pmsg->vcc;
   if(DS18_MEAS_FAIL==pmsg->temp) {
     alarms |= WS_ALR_BAD_TEMP;
     return 1;
   }
-  msgcnt++;
+  if(last_tmp!=pmsg->temp) tmp_chg_vector=1;
   last_tmp=pmsg->temp; 
   last_temp_cnt=0;
+  msgcnt++;
   mHist.addAcc(last_tmp, last_vcc);
   return 0;
 }
@@ -833,7 +850,7 @@ void radioSetup() {
 }
 
 void radioRead() {
-  wt_msg msg;
+  //wt_msg msg; // eventually, will move it here
   uint8_t len=sizeof(msg); 
   if(!nrf24.available()) { 
    err=6; alarms |= WS_ALR_WFAIL; 
@@ -854,3 +871,4 @@ void radioRead() {
 void radioIRQ() {
   flags |= WS_FLAG_RFREAD;
 }
+
