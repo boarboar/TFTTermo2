@@ -144,12 +144,13 @@ uint32_t rts=0;
 uint8_t inact_cnt=0; // compress ?
 uint8_t disp_cnt=0;  // compress ?
 
-uint8_t editmode=0; // 0..4 compress ?
-
 int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
 uint8_t uilev=WS_UI_MAIN;   // compress ?
+
+// unionize:
 uint8_t pageidx=0; // compress ? combine with editmode?
+uint8_t editmode=0; // 0..4 compress ?
 
 uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
 int16_t _lp_hpos=0;  // make 8bit, and prop to char size?
@@ -212,7 +213,7 @@ void loop()
   if(ms-mui>WS_UI_CYCLE || ms<mui) { // UI cycle
    mui=ms;
    last_temp_cnt++; 
-   if(uilev!=WS_UI_MAIN && !editmode && !inact_cnt) {  // back to main screen after user inactivity timeout
+   if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && editmode) && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
      updateScreen();
    }
@@ -264,7 +265,7 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 }
 
 void processShortClick() {
-  if(!editmode) { 
+  if(uilev!=WS_UI_SET || !editmode) { 
     uilev=(uilev+1)%WS_NUILEV;
     updateScreen();
   }
