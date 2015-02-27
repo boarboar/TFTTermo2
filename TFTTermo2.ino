@@ -56,6 +56,7 @@
 
 #define WS_FLAG_RFREAD    0x10
 #define WS_FLAG_ONCEFAIL  0x20
+#define WS_FLAG_NOUPDATE  0x40
 /*
 #define WS_FLAG_RFREAD    0x01
 #define WS_FLAG_ONCEFAIL  0x02
@@ -119,23 +120,7 @@ RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 TempHistory mHist;
 wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
-/*
-// state vars....
-struct {
-  uint8_t btcnt_1:4;
-  uint8_t btcnt_2:4;
-  // uint8_t err:4;
-  //uint8_t flags:4;  
-  //uint8_t chrt: 4;
-  // uint8_t editmode: 4;
-  // uint8_t uilev: 4;
-  // uint8_t pageidx: 4;
-  // uint8_t disp_cnt: 4;
-  // uint8_t inact_cnt: 6;
-  // uint16_t lp_vpos: 12;
-  // uint16_t hp_vpos: 12;
-} state = {0, 0};
-*/
+// state vars
 
 uint8_t err=0; 
 volatile uint8_t flags=0; // chart type encoded in LO half
@@ -144,11 +129,10 @@ uint8_t alarms=0;
 uint16_t msgcnt=0;
 
 // ************************ HIST
-int16_t last_tmp=-999;
-//int16_t prev_tmp=TH_NODATA;
-int16_t last_vcc=0;
-//int16_t prev_vcc=-1;
-uint8_t tmp_chg_vector=0, vcc_chg_vector=0;
+int16_t last_tmp=-999, last_vcc=0;
+//uint8_t tmp_chg_vector=0, vcc_chg_vector=0;
+uint8_t chg_vector=0;
+uint8_t last_sid=-1; 
 
 uint16_t last_temp_cnt=0;
 
@@ -208,7 +192,7 @@ void setup()
   mui=millis();
   
   rts = RTC.now().unixtime();
-  updateScreen(true);
+  updateScreen();
 }
 
 void loop()
@@ -218,8 +202,9 @@ void loop()
    radioRead();  
    if(err) dispErr();
    else {
-     updateScreen(false);
-     dispStat("READ OK.");
+     flags |= WS_FLAG_NOUPDATE;
+     updateScreen();
+     dispStat("READ ");
    }
   }
 
@@ -229,7 +214,7 @@ void loop()
    last_temp_cnt++; 
    if(uilev!=WS_UI_MAIN && !editmode && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
-     updateScreen(true);
+     updateScreen();
    }
    
    uint8_t btcnt_t;
@@ -247,31 +232,13 @@ void loop()
      btcnt_t=0;     
    }
    SETHBHI(btcnt, btcnt_t);
-   
-   /*
-   uint8_t btcnt_t;
-   btcnt_t=processClick(BUTTON_1, state.btcnt_1);
-   if(btcnt_t>WS_BUT_MAX) {
-     if(btcnt_t==WS_BUT_CLICK) processShortClick(); 
-     else processLongClick();
-     btcnt_t=0;     
-   }
-   state.btcnt_1=btcnt_t;
-   
-   btcnt_t=processClick(BUTTON_2, state.btcnt_2);
-   if(btcnt_t>WS_BUT_MAX) {
-     if(btcnt_t==WS_BUT_CLICK) processShortRightClick(); 
-     btcnt_t=0;     
-   }
-   state.btcnt_2=btcnt_t;
-   */
-   
+     
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
        if(!(alarms&WS_ALR_TO) && (uint32_t)last_temp_cnt*WS_UI_CYCLE/60000>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
          alarms |= WS_ALR_TO;
-         if(uilev==WS_UI_MAIN) updateScreen(true);       
+         if(uilev==WS_UI_MAIN) updateScreen();       
      }
      updateScreenTime(false);       
    }  
@@ -299,7 +266,7 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 void processShortClick() {
   if(!editmode) { 
     uilev=(uilev+1)%WS_NUILEV;
-    updateScreen(true);
+    updateScreen();
   }
   else {
     if(uilev==WS_UI_SET) {
@@ -336,7 +303,7 @@ void processShortRightClick() {
   if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
     if(++pageidx>=WS_CHART_NLEV) pageidx=0;
     Tft.fillScreen();    
-    chartHist(1/*, pageidx, GETCHRT()*/);
+    chartHist(1);
     return;
   }
   if(uilev==WS_UI_HIST) {
@@ -350,20 +317,19 @@ void processShortRightClick() {
   hiLightDigit(WHITE);
 }       
 
-void updateScreen(bool refresh) {
+void updateScreen() {
   lcd_defaults();
   line_init();
 
-  if(refresh) {
+  if(!(flags&WS_FLAG_NOUPDATE)) {
     Tft.fillScreen();
     Tft.drawString(lnames[uilev], 240, 0);
   }
    
   switch(uilev) {
     case WS_UI_MAIN: {      
-     if((/*prev_tmp!=last_tmp*/tmp_chg_vector || refresh) && last_tmp!=TH_NODATA) { 
-       //prev_tmp=last_tmp;
-       tmp_chg_vector=0;
+     if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
+       //tmp_chg_vector=0;
        int16_t t;
        Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
        Tft.setSize(WS_CHAR_TEMP_SZ);
@@ -375,13 +341,12 @@ void updateScreen(bool refresh) {
        Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*7, 80);    
        lcd_defaults();
      }
-     if(/*prev_vcc!=last_vcc*/vcc_chg_vector || refresh) {
-       //prev_vcc=last_vcc;
-       vcc_chg_vector=0;
+     if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
+       //vcc_chg_vector=0;
        line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
      }
-     
-     if(refresh) updateScreenTime(true);   
+     chg_vector=0;
+     if(!(flags&WS_FLAG_NOUPDATE)) updateScreenTime(true);   
      }      
      break;
     case WS_UI_HIST: 
@@ -390,7 +355,7 @@ void updateScreen(bool refresh) {
     case WS_UI_CHART: {
       pageidx=0;
       SETCHRT(TH_HIST_VAL_T);
-      chartHist(1/*, pageidx, TH_HIST_VAL_T*/);
+      chartHist(1);
       }
       break; 
     case WS_UI_CHART60: 
@@ -399,7 +364,7 @@ void updateScreen(bool refresh) {
     case WS_UI_CHART_VCC: {
       pageidx=0;
       SETCHRT(TH_HIST_VAL_V);
-      chartHist(1/*, pageidx, TH_HIST_VAL_V*/);
+      chartHist(1);
       }
       break;     
     case WS_UI_STAT: 
@@ -410,7 +375,7 @@ void updateScreen(bool refresh) {
       break;
     default: break;
   }
-  
+  flags &= ~WS_FLAG_NOUPDATE;
 }
 
 void updateScreenTime(bool reset) {
@@ -554,7 +519,7 @@ void dispErr() {
 }
 
 void dispStat(const char *pbuf) {
-  line_setpos(0, 211); line_printn(pbuf);
+  line_setpos(0, 211); line_printn(pbuf); if(last_sid!=-1) line_printn(itoas(last_sid));
 }
 
 void hiLightDigit(uint16_t color) {
@@ -611,7 +576,7 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 }
 
 
-void chartHist(uint8_t sid/*uint8_t scale, uint8_t type*/) {    
+void chartHist(uint8_t sid) {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
   prepChart(GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
@@ -816,15 +781,17 @@ void line_printn(const char* pbuf) {
 /****************** HIST ****************/
 
 uint8_t addHistAcc(struct wt_msg *pmsg) {
-  if(last_vcc!=pmsg->vcc) vcc_chg_vector=1;
+  chg_vector=0;
+  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; //vcc_chg_vector=1;
   last_vcc=pmsg->vcc;
   if(DS18_MEAS_FAIL==pmsg->temp) {
     alarms |= WS_ALR_BAD_TEMP;
     return 1;
   }
-  if(last_tmp!=pmsg->temp) tmp_chg_vector=1;
+  if(last_tmp!=pmsg->temp) chg_vector |= 0x01; //tmp_chg_vector=1;
   last_tmp=pmsg->temp; 
   last_temp_cnt=0;
+  last_sid=pmsg->sid;
   msgcnt++;
   mHist.addAcc(last_tmp, last_vcc);
   return 0;
