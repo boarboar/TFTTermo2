@@ -128,17 +128,7 @@ void TFT::fillScreen(void)
 
 void TFT::fillScreen(INT16 XL, INT16 XR, INT16 YU, INT16 YD)
 {
-    uint32_t  XY;
-/*
-    if(XL > XR) { XL = XL^XR; XR = XL^XR; XL = XL^XR;}
-    if(YU > YD) { YU = YU^YD; YD = YU^YD; YU = YU^YD;}
-	
-    XL = constrain(XL,0,getMaxX());
-    XR = constrain(XR,0,getMaxX());
-    YU = constrain(YU,0,getMaxY());
-    YD = constrain(YD,0,getMaxY());
-*/		
- //   setWindow(XL,XR,YU,YD);
+//    uint32_t  XY;
    
     sendCMD(0x2A);                                                      
     sendData(XL); 
@@ -148,6 +138,7 @@ void TFT::fillScreen(INT16 XL, INT16 XR, INT16 YU, INT16 YD)
     sendData(YD);
     sendCMD(0x2c);
  
+ /*
     XY = (XR-XL+1);
     XY *=(YD-YU+1);
 
@@ -166,6 +157,27 @@ void TFT::fillScreen(INT16 XL, INT16 XR, INT16 YU, INT16 YD)
     }
    
     TFT_CS_HIGH;
+    */
+    
+    XR=XR-XL+1;
+    YD=YD-YU+1;
+    
+    TFT_DC_HIGH;
+    TFT_CS_LOW;
+    
+    while(YD--) {
+      XL=XR;
+      while(XL--) {
+        if(_flags&LCD_BG) {
+          SPI.transfer(_bgColorH);
+          SPI.transfer(_bgColorL);
+        }
+        else {
+          SPI.transfer(_fgColorH);
+          SPI.transfer(_fgColorL);
+        }
+      }
+    }
 }
 
 void TFT::drawChar( INT8U ascii, INT16 poX, INT16 poY)
