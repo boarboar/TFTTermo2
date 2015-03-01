@@ -132,7 +132,7 @@ uint16_t msgcnt=0;
 int16_t last_tmp=-999, last_vcc=0;
 //uint8_t tmp_chg_vector=0, vcc_chg_vector=0;
 uint8_t chg_vector=0;
-uint8_t last_sid=-1; 
+uint8_t last_sid=0xFF; 
 
 uint16_t last_temp_cnt=0;
 
@@ -520,7 +520,7 @@ void dispErr() {
 }
 
 void dispStat(const char *pbuf) {
-  line_setpos(0, 211); line_printn(pbuf); if(last_sid!=-1) line_printn(itoas(last_sid));
+  line_setpos(0, 211); line_printn(pbuf); if(last_sid!=0xFF) line_printn(itoas(last_sid));
 }
 
 void hiLightDigit(uint16_t color) {
