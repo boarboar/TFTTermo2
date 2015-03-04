@@ -10,9 +10,7 @@
 #define TH_HIST_VAL_V 1
 
 #define TH_NODATA 0x0FFF
-//#define TH_SEMPTY 0xFF
 #define TH_SEMPTY 0xFFF
-//#define TH_ROLLUP_THR 122
 #define TH_ROLLUP_THR 244
 
 #define TH_SETEMPTY(I) (hist[I].mins=TH_SEMPTY)

@@ -5,11 +5,6 @@
 #include "hist.h"
 
 //TODO 
-// if hist>=25, failure to render vcc chart. I guess problem is in hist (before vcc)
-// hist corrupted as well (>1)
-
-
-// git push -u origin master //
 
 // 5523 PINOUT
 
@@ -130,7 +125,6 @@ uint16_t msgcnt=0;
 
 // ************************ HIST
 int16_t last_tmp=-999, last_vcc=0;
-//uint8_t tmp_chg_vector=0, vcc_chg_vector=0;
 uint8_t chg_vector=0;
 uint8_t last_sid=0xFF; 
 
@@ -330,7 +324,6 @@ void updateScreen() {
   switch(uilev) {
     case WS_UI_MAIN: {      
      if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
-       //tmp_chg_vector=0;
        int16_t t;
        Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
        Tft.setSize(WS_CHAR_TEMP_SZ);
@@ -343,7 +336,6 @@ void updateScreen() {
        lcd_defaults();
      }
      if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
-       //vcc_chg_vector=0;
        line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
      }
      chg_vector=0;
@@ -599,12 +591,9 @@ void chartHist(uint8_t sid) {
       x0=xr-(int32_t)mid/chart_xstep_denom;
       if(x0>0) drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
-      //now.shiftMins(-mid); 
       line_setpos(x0, 224);
-      //printDate(now);
       line_printn(now.dayOfWeekStr(dw));
       mid+=1440; // mins in 24h
-      //now.shiftMins(-1440);
       if(dw) dw--; else dw=7;
     }
   }
@@ -618,14 +607,14 @@ void chartHist(uint8_t sid) {
   do {
     int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-    // CP3 +++
-    
     if(!mHist.isHead()) {  
+      /*
      if(x1>=0 && x0>0) 
        Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
+       */
+     if(x0>0) 
+       Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
     } 
-    
-   // CP3 ---    
     x0=x1; y0=y1;
   } while(mHist.movePrev() && x0>0);
   }
@@ -783,13 +772,13 @@ void line_printn(const char* pbuf) {
 
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   chg_vector=0;
-  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; //vcc_chg_vector=1;
+  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; // temporary...
   last_vcc=pmsg->vcc;
   if(DS18_MEAS_FAIL==pmsg->temp) {
     alarms |= WS_ALR_BAD_TEMP;
     return 1;
   }
-  if(last_tmp!=pmsg->temp) chg_vector |= 0x01; //tmp_chg_vector=1;
+  if(last_tmp!=pmsg->temp) chg_vector |= 0x01; // temporary...
   last_tmp=pmsg->temp; 
   last_temp_cnt=0;
   last_sid=pmsg->sid;

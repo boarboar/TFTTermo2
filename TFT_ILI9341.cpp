@@ -128,8 +128,9 @@ void TFT::fillScreen(void)
 
 void TFT::fillScreen(INT16 XL, INT16 XR, INT16 YU, INT16 YD)
 {
-//    uint32_t  XY;
-   
+    if(XL<0) XL=0;
+    if(XR<XL) XR=XL;
+    
     sendCMD(0x2A);                                                      
     sendData(XL); 
     sendData(XR);
@@ -137,27 +138,6 @@ void TFT::fillScreen(INT16 XL, INT16 XR, INT16 YU, INT16 YD)
     sendData(YU);
     sendData(YD);
     sendCMD(0x2c);
- 
- /*
-    XY = (XR-XL+1);
-    XY *=(YD-YU+1);
-
-    TFT_DC_HIGH;
-    TFT_CS_LOW;
-    
-    if(_flags&LCD_BG) 
-    while(XY--) {
-      SPI.transfer(_bgColorH);
-      SPI.transfer(_bgColorL);
-    }
-    else
-    while(XY--) {
-      SPI.transfer(_fgColorH);
-      SPI.transfer(_fgColorL);
-    }
-   
-    TFT_CS_HIGH;
-    */
     
     XR=XR-XL+1;
     YD=YD-YU+1;
