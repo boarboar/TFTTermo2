@@ -52,10 +52,6 @@
 #define WS_FLAG_RFREAD    0x10
 #define WS_FLAG_ONCEFAIL  0x20
 #define WS_FLAG_NOUPDATE  0x40
-/*
-#define WS_FLAG_RFREAD    0x01
-#define WS_FLAG_ONCEFAIL  0x02
-*/
 
 #define WS_NUILEV 7
 #define WS_UI_MAIN  0
@@ -72,6 +68,9 @@
 #define WS_CHAR_TEMP_SZ  6
 #define WS_CHAR_TIME_SET_SZ  6
 #define WS_CHAR_DEF_SIZE 2
+
+#define WS_SCREEN_STAT_LINE_Y  224
+#define WS_SCREEN_TIME_LINE_Y  0
 
 #define WS_UI_CYCLE 50 
 #define WS_DISP_CNT    10  // in UI_CYCLEs (=0.5s)
@@ -382,7 +381,7 @@ void updateScreenTime(bool reset) {
   }
   if(sz) {
     DateTime now = RTC.now();
-    printTime(now, reset, 0, 40, sz);   
+    printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
   }  
 }
 
@@ -506,19 +505,23 @@ void disp_dig(byte redraw, byte ngrp, byte *data, byte *p_data, int x, int y, ui
 
 // buf 4
 void dispErr() {
+  lcd_defaults();
   Tft.setColor(RED);
-  line_setpos(0, 211); line_printn("ERR="); line_printn(itoas(err));
+  line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn("ERR="); line_printn(itoas(err));
   Tft.setColor(GREEN);
 }
 
 void dispStat(const char *pbuf) {
-  line_setpos(0, 211); line_printn(pbuf); if(last_sid!=0xFF) line_printn(itoas(last_sid));
+  lcd_defaults();
+  line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn(pbuf); 
+  if(last_sid!=0xFF) // this is tempoarily
+    line_printn(itoas(last_sid));
 }
 
 void hiLightDigit(uint16_t color) {
   uint8_t d=(editmode>0 && editmode<3)?editmode-1:editmode;
   Tft.setColor(color);
-  Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, 40, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);
+  Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, WS_SCREEN_TIME_LINE_Y, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);
 }
 
 
