@@ -468,7 +468,7 @@ void dispTimeoutTemp(uint32_t ts, bool reset, int x, int y) {
   byte tmp[2];  
   byte hours;
   if(reset) p_hours=-1;
-  tmp[2]=ts%60; tmp[1]=(ts/60)%60; hours=(ts/3600)%24;
+  tmp[1]=ts%60; tmp[0]=(ts/60)%60; hours=(ts/3600)%24;
   if(hours>0 && hours!=p_hours) {
     line_printn("> "); line_printn(itoas(hours)); line_printn(" H");    
     p_hours=hours;
