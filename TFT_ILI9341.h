@@ -114,8 +114,8 @@ public:
 	void setOrientation(int value);
         void fillScreen(void);
 	void fillScreen(INT16 XL,INT16 XR,INT16 YU,INT16 YD);
-	void drawChar(INT8U ascii,INT16 poX, INT16 poY);
-        INT16U drawString(const char *string,INT16 poX, INT16 poY);
+	void drawChar(INT8U ascii,INT16U poX, INT16U poY);
+        INT16U drawString(const char *string,INT16U poX, INT16U poY);
 	inline void fillRectangle(INT16 poX, INT16 poY, INT16 length, INT16U width) { setFillColor(LCD_BG); fillScreen(poX, poX+length, poY, poY+width); }	
         void drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1);
         inline void drawVerticalLine(INT16 poX, INT16 poY,INT16 length) { setFillColor(LCD_FG); fillScreen(poX,poX,poY,poY+length);}  

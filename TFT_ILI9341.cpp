@@ -160,7 +160,7 @@ void TFT::fillScreen(INT16 XL, INT16 XR, INT16 YU, INT16 YD)
     }
 }
 
-void TFT::drawChar( INT8U ascii, INT16 poX, INT16 poY)
+void TFT::drawChar( INT8U ascii, INT16U poX, INT16U poY)
 {   
     if(_flags&LCD_OPAQ) { setFillColor(LCD_BG); fillScreen(poX, poX+FONT_SPACE*_size_mask_thick, poY, poY+FONT_Y*_size_mask_thick); }	
     setFillColor(LCD_FG);
@@ -180,7 +180,7 @@ void TFT::drawChar( INT8U ascii, INT16 poX, INT16 poY)
     setFillColor(LCD_BG);
 }
 
-INT16U TFT::drawString(const char *string,INT16 poX, INT16 poY)
+INT16U TFT::drawString(const char *string, INT16U poX, INT16U poY)
 {
     while(*string)
     {

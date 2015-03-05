@@ -71,6 +71,7 @@
 
 #define WS_SCREEN_STAT_LINE_Y  224
 #define WS_SCREEN_TIME_LINE_Y  0
+#define WS_SCREEN_TEMP_LINE_Y  80
 
 #define WS_UI_CYCLE 50 
 #define WS_DISP_CNT    10  // in UI_CYCLEs (=0.5s)
@@ -134,10 +135,8 @@ uint16_t last_temp_cnt=0;
 uint32_t mui;
 uint32_t rts=0; 
 
-uint8_t inact_cnt=0; // compress ?
-uint8_t disp_cnt=0;  // compress ?
-
-int8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
+uint8_t inact_cnt, disp_cnt=0;  
+uint8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 
 uint8_t uilev=WS_UI_MAIN;   // compress ?
 
@@ -146,14 +145,12 @@ uint8_t pageidx=0; // compress ? combine with editmode?
 uint8_t editmode=0; // 0..4 compress ?
 
 uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
-int16_t _lp_hpos=0;  // make 8bit, and prop to char size?
+uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
 // trancient vars
 
 int16_t mint, maxt; // this is for charting
 char buf[6];
-
-// UNIONIZE!!! msg, buf, local time etc...
 
 void setup()
 {
@@ -322,14 +319,19 @@ void updateScreen() {
    
   switch(uilev) {
     case WS_UI_MAIN: {      
+      /*
      if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
        int16_t t;
        Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
        Tft.setSize(WS_CHAR_TEMP_SZ);
-       t=Tft.drawString(printTemp(last_tmp), 0, 80);
-       Tft.drawString("\177c ", t, 80);
+       t=Tft.drawString(printTemp(last_tmp), 0, WS_SCREEN_TEMP_LINE_Y);
+       //Tft.drawString("\177c ", t, 80); //177 oct = 127 dec, - 32= 95 font table entry
+       Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
+       Tft.setSize(WS_CHAR_TEMP_SZ/2);
+       t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
+       Tft.drawString("C", t, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);
        Tft.setColor(YELLOW);
-       Tft.setSize(4);
+       //Tft.setSize(4);
        t=mHist.getDiff(last_tmp, 1);
        Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*7, 80);    
        lcd_defaults();
@@ -337,6 +339,8 @@ void updateScreen() {
      if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
        line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
      }
+     */
+     dispMain(1);
      chg_vector=0;
      if(!(flags&WS_FLAG_NOUPDATE)) updateScreenTime(true);   
      }      
@@ -370,12 +374,35 @@ void updateScreen() {
   flags &= ~WS_FLAG_NOUPDATE;
 }
 
+void dispMain(uint8_t sid) {
+     if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
+       int16_t t;
+       Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
+       Tft.setSize(WS_CHAR_TEMP_SZ);
+       t=Tft.drawString(printTemp(last_tmp), 0, WS_SCREEN_TEMP_LINE_Y);
+       //Tft.drawString("\177c ", t, 80); //177 oct = 127 dec, - 32= 95 font table entry
+       Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
+       Tft.setSize(WS_CHAR_TEMP_SZ/2);
+       t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
+       Tft.drawString("C", t, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);
+       Tft.setColor(YELLOW);
+       //Tft.setSize(4);
+       t=mHist.getDiff(last_tmp, 1);
+       Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*7, 80);    
+       lcd_defaults();
+     }
+     if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
+       line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
+     }     
+}
+
 void updateScreenTime(bool reset) {
   uint8_t sz=0;
   
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
-    dispTimeout((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
+    //dispTimeout((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
+    dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
   } else if(uilev==WS_UI_SET) {
       if(!editmode) sz=WS_CHAR_TIME_SET_SZ;   
   }
@@ -415,10 +442,13 @@ char *printVal(uint8_t type, int16_t val) {
     
 //static byte p_date[3]={-1,-1,-1};
 static byte p_time[3]={-1,-1,-1};
-static byte p_to[3]={-1,-1,-1};
-static byte p_days=-1;
+//static byte p_to[3]={-1,-1,-1};
+//static byte p_days=-1;
+static byte p_to[2]={-1,-1};
+static byte p_hours=-1;
 
 // buf 4
+/*
 void dispTimeout(uint32_t ts, bool reset, int x, int y) {
   byte tmp[3];  
   if(reset) p_days=-1;
@@ -429,16 +459,43 @@ void dispTimeout(uint32_t ts, bool reset, int x, int y) {
     p_days=days;
   }
   else {
-     disp_dig(reset, 3, tmp, p_to, x, y, WS_CHAR_DEF_SIZE/*, ':', 0*/);
+     disp_dig(reset, 3, tmp, p_to, x, y, WS_CHAR_DEF_SIZE);
+  }     
+}
+*/
+
+void dispTimeoutTemp(uint32_t ts, bool reset, int x, int y) {
+  byte tmp[2];  
+  byte hours;
+  if(reset) p_hours=-1;
+  tmp[2]=ts%60; tmp[1]=(ts/60)%60; hours=(ts/3600)%24;
+  if(hours>0 && hours!=p_hours) {
+    line_printn("> "); line_printn(itoas(hours)); line_printn(" H");    
+    p_hours=hours;
+  }
+  else {
+     disp_dig(reset, 2, tmp, p_to, x, y, WS_CHAR_DEF_SIZE);
   }     
 }
 
-void printTime(const DateTime& pDT, bool reset, int x, int y, int sz/*, bool blinkd, bool printdate*/){
+void dispTimeoutStatic(uint32_t ts) {
+  byte tmp[3];  
+  tmp[2]=ts%60; tmp[1]=(ts/60)%60; tmp[0]=(ts/3600)%24;
+  uint8_t days=ts/3600/24;  
+  if(days>0) {
+    line_printn("> "); line_printn(itoas(days)); line_printn(" days");    
+  }
+  else {
+     disp_dig(true, 3, tmp, 0, line_getposx(), line_getpos(), WS_CHAR_DEF_SIZE);
+  }     
+}
+
+void printTime(const DateTime& pDT, bool reset, int x, int y, int sz){
   Tft.setSize(sz);
   Tft.setColor(YELLOW);
   byte tmp[3];  
   tmp[0]=pDT.hour(); tmp[1]=pDT.minute(); tmp[2]=pDT.second();
-  disp_dig(reset, 2, tmp, p_time, x, y, sz/*, (!blinkd || p_time[2]%2) ? ':' : ' ', tmp[2]!=p_time[2]*/);
+  disp_dig(reset, 2, tmp, p_time, x, y, sz);
   p_time[2]=tmp[2]; // store sec
   /*
   if(printdate) {
@@ -449,7 +506,7 @@ void printTime(const DateTime& pDT, bool reset, int x, int y, int sz/*, bool bli
 }
 
 void printDate(const DateTime& pDT) {
- line_printn(itoas(pDT.day())); line_printn("/"); line_printn(itoas(pDT.month())); line_printn("/"); line_printn(itoas(pDT.year()));
+ line_printn(itoas2(pDT.day())); line_printn("/"); line_printn(itoas2(pDT.month())); line_printn("/"); line_printn(itoas2(pDT.year()));
 }
 
 void timeUp(uint8_t dig, int sz) {
@@ -495,11 +552,11 @@ void disp_dig(byte redraw, byte ngrp, byte *data, byte *p_data, int x, int y, ui
     for(byte isym=0; isym<2; isym++) {
        byte div10=(isym==0?10:1);
        byte dig=(data[igrp]/div10)%10;
-       if(redraw || dig!=(p_data[igrp]/div10)%10)
+       if(redraw || !p_data || dig!=(p_data[igrp]/div10)%10)
          Tft.drawChar('0'+dig,posX,y); 
        posX+=FONT_SPACE*sz;
     }
-    p_data[igrp]=data[igrp];
+    if(p_data) p_data[igrp]=data[igrp];
   }    
 }
 
@@ -530,11 +587,14 @@ void hiLightDigit(uint16_t color) {
 void printStat() {
    DateTime now=RTC.now(); 
    line_printn("NOW: "); printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
-   line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
-   line_printn("RTT: "); dispTimeout(now.unixtime()-rts, true, line_getposx(), line_getpos()); line_print("");
+   //line_printn("UPT: "); dispTimeout(millis()/1000, true, line_getposx(), line_getpos()); line_print("");
+   //line_printn("RTT: "); dispTimeout(now.unixtime()-rts, true, line_getposx(), line_getpos()); line_print("");
+   line_printn("UPT: "); dispTimeoutStatic(millis()/1000); line_print("");
+   line_printn("RTT: "); dispTimeoutStatic(now.unixtime()-rts); line_print("");
    mHist.iterBegin();  
    while(mHist.movePrev());
-   line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
+   //line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
+   line_printn("DUR: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
    line_printn("HDL="); line_print(itoas(mHist.getHeadDelay()));   
    line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));
@@ -585,14 +645,18 @@ void chartHist(uint8_t sid) {
   uint16_t mbefore=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
   xr=(int32_t)mbefore/chart_xstep_denom;
   if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1;  
-  if(xr>16) { // draw midnight lines  // do something with this block. Too many local vars!
+  if(xr>12) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
     uint8_t dw=now.dayOfWeek();
     // note - now is not needed anymore
-    while(mid<mbefore) {
+    //while(mid<mbefore) {
+      // mbefore is not needed! can be utilized instead of mid
+    while(1) {  
       x0=xr-(int32_t)mid/chart_xstep_denom;
-      if(x0>0) drawVertDashLine(x0, YELLOW);
+      if(x0<0) break;
+      //if(x0>0) 
+        drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       line_setpos(x0, 224);
       line_printn(now.dayOfWeekStr(dw));
@@ -608,6 +672,7 @@ void chartHist(uint8_t sid) {
   Tft.setColor(CYAN);
   Tft.setThick(5);
   do {
+    // we can unionize {y1, x1} with buf
     int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
     if(!mHist.isHead()) {  
@@ -626,9 +691,9 @@ void chartHist(uint8_t sid) {
 
 void chartHist60(uint8_t sid) 
 {    
-  const int DUR_24=24;
-  const int DUR_MIN=60;
-  const int xstep = CHART_WIDTH/DUR_24;
+  const uint16_t DUR_24=24;
+  const uint16_t DUR_MIN=60;
+  const int16_t xstep = CHART_WIDTH/DUR_24;
 
   { // histogramm scope
   prepChart(TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
@@ -794,6 +859,11 @@ char *itoas(uint8_t i) {
   return itoa(i, buf, 10);
 }
 
+char *itoas2(uint8_t i) {
+  if(i<10) { *buf='0'; itoa(i, buf+1, 10); }
+  else itoa(i, buf, 10);
+  return buf;
+}
 
 /****************** RADIO ****************/
 
