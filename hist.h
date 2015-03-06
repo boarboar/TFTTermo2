@@ -2,7 +2,6 @@
 // effective storage is TH_HIST_SZ-1
 //#define TH_HIST_SZ  24
 #define TH_HIST_SZ  26
-//#define TH_HIST_SZ  254 
 #define TH_ACC_TIME  14 //mins
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2

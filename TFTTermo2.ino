@@ -69,6 +69,8 @@
 #define WS_CHAR_TIME_SET_SZ  6
 #define WS_CHAR_DEF_SIZE 2
 
+#define WS_SCREEN_SIZE_X  320
+#define WS_SCREEN_SIZE_Y  240
 #define WS_SCREEN_STAT_LINE_Y  224
 #define WS_SCREEN_TIME_LINE_Y  0
 #define WS_SCREEN_TEMP_LINE_Y  80
@@ -164,21 +166,36 @@ void setup()
     
   Tft.TFTinit(TFT_CS_PIN, TFT_DC_PIN);
   Tft.setOrientation(LCD_LANDSCAPE);
-  lcd_defaults();
   pinMode(TFT_BL_PIN, OUTPUT);
   digitalWrite(TFT_BL_PIN, HIGH);
   
+  lcd_defaults();
+  
+  /*
+  line_init();
+  line_printn("built: "); line_print(__DATE__);
+  */
+  
+  editmode=0; hiLightDigit(YELLOW); delay(100); // test
+  
   dispStat("INIT CLK");   
   RTC.begin();
+  
+  editmode++; hiLightDigit(YELLOW); delay(100); // test
   
   dispStat("INIT NRF");
   radioSetup();
   pinMode(NRF_IRQ_PIN, INPUT);  
   attachInterrupt(NRF_IRQ_PIN, radioIRQ, FALLING); 
   
+  editmode++; hiLightDigit(YELLOW); delay(100); // test
+  
   if(!err) dispStat("INIT OK.");  
   else dispErr();
- 
+
+  editmode++; hiLightDigit(YELLOW); delay(100); // test
+  editmode=0;
+  
   mHist.init(); 
   mui=millis();
   
@@ -319,27 +336,6 @@ void updateScreen() {
    
   switch(uilev) {
     case WS_UI_MAIN: {      
-      /*
-     if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
-       int16_t t;
-       Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
-       Tft.setSize(WS_CHAR_TEMP_SZ);
-       t=Tft.drawString(printTemp(last_tmp), 0, WS_SCREEN_TEMP_LINE_Y);
-       //Tft.drawString("\177c ", t, 80); //177 oct = 127 dec, - 32= 95 font table entry
-       Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
-       Tft.setSize(WS_CHAR_TEMP_SZ/2);
-       t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
-       Tft.drawString("C", t, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);
-       Tft.setColor(YELLOW);
-       //Tft.setSize(4);
-       t=mHist.getDiff(last_tmp, 1);
-       Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*7, 80);    
-       lcd_defaults();
-     }
-     if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
-       line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
-     }
-     */
      dispMain(1);
      chg_vector=0;
      if(!(flags&WS_FLAG_NOUPDATE)) updateScreenTime(true);   
@@ -375,25 +371,23 @@ void updateScreen() {
 }
 
 void dispMain(uint8_t sid) {
-     if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
-       int16_t t;
-       Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
-       Tft.setSize(WS_CHAR_TEMP_SZ);
-       t=Tft.drawString(printTemp(last_tmp), 0, WS_SCREEN_TEMP_LINE_Y);
-       //Tft.drawString("\177c ", t, 80); //177 oct = 127 dec, - 32= 95 font table entry
-       Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
-       Tft.setSize(WS_CHAR_TEMP_SZ/2);
-       t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
-       Tft.drawString("C", t, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);
-       Tft.setColor(YELLOW);
-       //Tft.setSize(4);
-       t=mHist.getDiff(last_tmp, 1);
-       Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*7, 80);    
-       lcd_defaults();
-     }
-     if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
-       line_setpos(200, 211); line_printn(printVcc(last_vcc)); line_printn("v");
-     }     
+  if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
+    int16_t t;
+    Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
+    Tft.setSize(WS_CHAR_TEMP_SZ);
+    t=Tft.drawString(printTemp(last_tmp), 0, WS_SCREEN_TEMP_LINE_Y);
+    Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
+    Tft.setSize(WS_CHAR_TEMP_SZ/2);
+    t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
+    Tft.drawString("C", t, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);
+    Tft.setColor(YELLOW);
+    t=mHist.getDiff(last_tmp, 1);
+    Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, 80);    
+    lcd_defaults();
+  }
+  if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
+    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*5, WS_SCREEN_TEMP_LINE_Y); line_printn(printVcc(last_vcc)); line_printn("v");
+  }     
 }
 
 void updateScreenTime(bool reset) {
@@ -402,9 +396,9 @@ void updateScreenTime(bool reset) {
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
     //dispTimeout((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
-    dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
+    dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
   } else if(uilev==WS_UI_SET) {
-      if(!editmode) sz=WS_CHAR_TIME_SET_SZ;   
+      if(!editmode) sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
   }
   if(sz) {
     DateTime now = RTC.now();
@@ -649,7 +643,7 @@ void chartHist(uint8_t sid) {
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
     uint8_t dw=now.dayOfWeek();
-    // note - now is not needed anymore
+    // note - now is not needed anymore. Or - unionize with buf
     //while(mid<mbefore) {
       // mbefore is not needed! can be utilized instead of mid
     while(1) {  
@@ -675,14 +669,13 @@ void chartHist(uint8_t sid) {
     // we can unionize {y1, x1} with buf
     int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
+    /*
     if(!mHist.isHead()) {  
-      /*
-     if(x1>=0 && x0>0) 
-       Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
-       */
      if(x0>0) 
        Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
-    } 
+    } */
+    if(!mHist.isHead() && x0>0) 
+       Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
     x0=x1; y0=y1;
   } while(mHist.movePrev() && x0>0);
   }
@@ -715,6 +708,7 @@ void chartHist60(uint8_t sid)
       // draw prev;
       if(cnt) {
         acc/=cnt;
+        // unionize with buf
         int16_t y0=y_z;        
         int16_t h;
         if(acc<0) {
@@ -787,7 +781,6 @@ void prepChart(uint8_t type, uint16_t mbefore) {
   y0=(maxt-mint)>100 ? 50 : 10;  
   for(int16_t ig=mint; ig<=maxt; ig+=y0) { // degree lines
      int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
-     //if(ig>mint && ig<maxt) Tft.drawStraightDashedLine(LCD_HORIZONTAL, 0, yl, CHART_WIDTH, ig==0? BLUE : GREEN, BLACK, 0x0f);
      if(ig>mint && ig<maxt) {
        Tft.setColor(ig==0? BLUE : GREEN);
        Tft.drawHorizontalLine(0, yl, CHART_WIDTH);
@@ -801,7 +794,6 @@ void prepChart(uint8_t type, uint16_t mbefore) {
 void drawVertDashLine(int x, uint16_t color) {
   Tft.setColor(color);
   Tft.drawVerticalLine(x, CHART_TOP, CHART_HEIGHT);
-  //Tft.drawStraightDashedLine(LCD_VERTICAL, x, CHART_TOP, CHART_HEIGHT, color,BLACK, 0x0f); // 
 }
 
 void lcd_defaults() {
