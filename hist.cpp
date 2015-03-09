@@ -20,7 +20,7 @@ void TempHistory::init() {
   acc_prev_time_m=millis()/60000L;
 }
 
-boolean TempHistory::addAcc(int16_t temp, int16_t vcc) {
+boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   uint8_t i, cnt;
   uint16_t mins_th, mins;
     
@@ -50,7 +50,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc) {
     hist[0].temp=(acc.temp/acc.cnt/TH_HIST_DV_T);
     hist[0].vcc=(acc.vcc/acc.cnt/TH_HIST_DV_V);
     hist[0].mins=mins;
-   
+    hist[0].sid=sid;
     acc_prev_time_m=millis()/60000L;
     acc.temp=0;
     acc.vcc=0;

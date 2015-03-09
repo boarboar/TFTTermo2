@@ -73,7 +73,7 @@
 #define WS_SCREEN_SIZE_Y  240
 #define WS_SCREEN_STAT_LINE_Y  224
 #define WS_SCREEN_TIME_LINE_Y  0
-#define WS_SCREEN_TEMP_LINE_Y  80
+#define WS_SCREEN_TEMP_LINE_Y  60
 
 #define WS_UI_CYCLE 50 
 #define WS_DISP_CNT    10  // in UI_CYCLEs (=0.5s)
@@ -386,7 +386,7 @@ void dispMain(uint8_t sid) {
     lcd_defaults();
   }
   if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
-    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*5, WS_SCREEN_TEMP_LINE_Y); line_printn(printVcc(last_vcc)); line_printn("v");
+    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y); line_printn(printVcc(last_vcc)); line_printn("v");
   }     
 }
 
@@ -396,7 +396,7 @@ void updateScreenTime(bool reset) {
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
     //dispTimeout((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
-    dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
+    dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
   } else if(uilev==WS_UI_SET) {
       if(!editmode) sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
   }
@@ -516,7 +516,7 @@ void timeUp(uint8_t dig, int sz) {
   
   Tft.setSize(sz);
   Tft.setColor(YELLOW);
-  disp_dig(false, 2, tmp, p_time, 0, 40, sz/*, ':', true*/);
+  disp_dig(false, 2, tmp, p_time, 0, WS_SCREEN_TIME_LINE_Y, sz);
 }
 
 void timeStore() {
@@ -634,11 +634,11 @@ void chartHist(uint8_t sid) {
  
   int16_t xr, x0;     
   
-  drawVertDashLine(xr, BLUE);
   {
   uint16_t mbefore=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
   xr=(int32_t)mbefore/chart_xstep_denom;
-  if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1;  
+  if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1; 
+  drawVertDashLine(xr, BLUE);
   if(xr>12) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
     uint16_t mid = now.hour()*60+now.minute();
@@ -843,7 +843,8 @@ uint8_t addHistAcc(struct wt_msg *pmsg) {
   last_temp_cnt=0;
   last_sid=pmsg->sid;
   msgcnt++;
-  mHist.addAcc(last_tmp, last_vcc);
+  if(pmsg->sid!=1) return 0; // for time being
+  mHist.addAcc(last_tmp, last_vcc, last_sid);
   return 0;
 }
 
