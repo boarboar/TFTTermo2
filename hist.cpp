@@ -23,13 +23,14 @@ void TempHistory::init() {
 boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   uint8_t i, cnt;
   uint16_t mins_th, mins;
-    
+  mins=interval_m(acc_prev_time_m); //time lapsed from previous storage
+  /*  
   acc.cnt++;
   acc.temp+=temp;
-  acc.vcc+=vcc;
-  mins=interval_m(acc_prev_time_m); //time lapsed from previous storage
+  acc.vcc+=vcc;  
   if(mins>=TH_ACC_TIME) { 
     // add to hist 
+    */
     // compress first
     // test implementation...
     i=0; mins_th=mins; // start at head with 15 minutes   
@@ -47,18 +48,34 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
     } 
     for(i=TH_HIST_SZ-1; i>0; i--) hist[i]=hist[i-1]; // shift all right
     // add head
-    hist[0].temp=(acc.temp/acc.cnt/TH_HIST_DV_T);
-    hist[0].vcc=(acc.vcc/acc.cnt/TH_HIST_DV_V);
+    //hist[0].temp=(acc.temp/acc.cnt/TH_HIST_DV_T);
+    //hist[0].vcc=(acc.vcc/acc.cnt/TH_HIST_DV_V);
+    hist[0].temp=temp/TH_HIST_DV_T;
+    hist[0].vcc=vcc/TH_HIST_DV_T;
     hist[0].mins=mins;
     hist[0].sid=sid;
     acc_prev_time_m=millis()/60000L;
-    acc.temp=0;
-    acc.vcc=0;
-    acc.cnt=0;
+    //acc.temp=0;
+    //acc.vcc=0;
+    //acc.cnt=0;
     return true;
+    /*
   } else return false;
+  */
 }
 
+TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
+  uint8_t i;
+  pos++;
+  for(i=0; i<TH_HIST_SZ && !TH_ISEMPTY(i); i++) {
+    if(hist[i].sid==sid) {
+      pos--; 
+      if(!pos) break;
+    }
+  }
+  if(pos) return NULL;
+  else return hist+i;
+}
 
 int16_t TempHistory::getDiff(int16_t val, uint8_t sid) {
   if(TH_ISEMPTY(0)) return 0;

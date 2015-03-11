@@ -39,7 +39,8 @@ public:
     boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);
     int16_t getDiff(int16_t val, uint8_t sid);
     uint8_t getSz();
-    wt_msg_hist *getData() { return hist; }
+    //wt_msg_hist *getData() { return hist; }
+    wt_msg_hist *getData(uint8_t sid, uint8_t pos);
     void iterBegin();
     boolean movePrev(); 
     wt_msg_hist *getPrev() { return hist+iter_ptr; }
@@ -52,7 +53,7 @@ public:
 protected:
     uint16_t compress(uint8_t level);
     wt_msg_hist hist[TH_HIST_SZ];
-    wt_msg_acc acc;
+    //wt_msg_acc acc;
     uint8_t acc_prev_time_m;
     uint8_t iter_ptr;
     uint16_t iter_mbefore; 

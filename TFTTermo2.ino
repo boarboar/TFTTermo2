@@ -46,6 +46,7 @@
 #define WS_SENS_TIMEOUT_M 10 // minutes
 
 #define DS18_MEAS_FAIL	9999  // Temporarily!
+#define DS18_MEAS_NONE  -999
 
 // flags - only high bits, low bits reserved for value type
 
@@ -126,7 +127,7 @@ uint8_t alarms=0;
 uint16_t msgcnt=0;
 
 // ************************ HIST
-int16_t last_tmp=-999, last_vcc=0;
+int16_t last_tmp=DS18_MEAS_NONE, last_vcc=0;
 uint8_t chg_vector=0;
 uint8_t last_sid=0xFF; 
 
@@ -375,7 +376,7 @@ void dispMain(uint8_t sid) {
     int16_t t;
     Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
-    t=Tft.drawString(printTemp(last_tmp), 0, WS_SCREEN_TEMP_LINE_Y);
+    t=Tft.drawString(last_tmp!=DS18_MEAS_NONE ? printTemp(last_tmp) : " --.--", 0, WS_SCREEN_TEMP_LINE_Y);
     Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
     Tft.setSize(WS_CHAR_TEMP_SZ/2);
     t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
@@ -386,7 +387,7 @@ void dispMain(uint8_t sid) {
     lcd_defaults();
   }
   if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
-    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y); line_printn(printVcc(last_vcc)); line_printn("v");
+    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y); line_printn(last_vcc>0 ? printVcc(last_vcc) : "-.--"); line_printn("v");
   }     
 }
 
@@ -593,6 +594,23 @@ void printStat() {
    line_printn("HDL="); line_print(itoas(mHist.getHeadDelay()));   
    line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));
    line_printn("CHK="); line_print(itoas(mHist.check()));  
+   { // this is for test only!
+   TempHistory::wt_msg_hist *lst;
+   lst=mHist.getData(1, 0);  
+   line_printn("LST="); 
+   if(lst) {
+     line_printn(itoa(lst->getVal(TH_HIST_VAL_T), buf, 10));
+     line_printn(" ");
+     line_printn(itoa(lst->getVal(TH_HIST_VAL_V), buf, 10));
+   } else line_print("");
+   lst=mHist.getData(1, 1);  
+   line_printn("PRV="); 
+   if(lst) {
+     line_printn(itoa(lst->getVal(TH_HIST_VAL_T), buf, 10));
+     line_printn(" ");
+     line_printn(itoa(lst->getVal(TH_HIST_VAL_V), buf, 10));
+   } else line_print("");
+   }
    //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
@@ -615,10 +633,12 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
     TempHistory::wt_msg_hist *h = mHist.getPrev();
     line_printn(itoas(i)); 
     line_setcharpos(4);
+    line_printn(itoas(h->sid)); 
+    line_setcharpos(6);
     line_printn(printTemp(h->getVal(TH_HIST_VAL_T))); 
-    line_setcharpos(11);
+    line_setcharpos(13);
     line_printn(printVcc(h->getVal(TH_HIST_VAL_V))); 
-    line_setcharpos(16);
+    line_setcharpos(18);
     line_print(itoa(h->mins, buf, 10));
     i++;    
     } while(mHist.movePrev() && line_getpos()<230);
@@ -644,13 +664,11 @@ void chartHist(uint8_t sid) {
     uint16_t mid = now.hour()*60+now.minute();
     uint8_t dw=now.dayOfWeek();
     // note - now is not needed anymore. Or - unionize with buf
-    //while(mid<mbefore) {
-      // mbefore is not needed! can be utilized instead of mid
+    // mbefore is not needed! can be utilized instead of mid
     while(1) {  
       x0=xr-(int32_t)mid/chart_xstep_denom;
       if(x0<0) break;
-      //if(x0>0) 
-        drawVertDashLine(x0, YELLOW);
+      drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       line_setpos(x0, 224);
       line_printn(now.dayOfWeekStr(dw));
@@ -669,11 +687,6 @@ void chartHist(uint8_t sid) {
     // we can unionize {y1, x1} with buf
     int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
     int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-    /*
-    if(!mHist.isHead()) {  
-     if(x0>0) 
-       Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
-    } */
     if(!mHist.isHead() && x0>0) 
        Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
     x0=x1; y0=y1;
@@ -832,13 +845,13 @@ void line_printn(const char* pbuf) {
 
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   chg_vector=0;
-  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; // temporary...
+  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; // temporary...for sid 1
   last_vcc=pmsg->vcc;
   if(DS18_MEAS_FAIL==pmsg->temp) {
-    alarms |= WS_ALR_BAD_TEMP;
+    //alarms |= WS_ALR_BAD_TEMP;
     return 1;
   }
-  if(last_tmp!=pmsg->temp) chg_vector |= 0x01; // temporary...
+  if(last_tmp!=pmsg->temp) chg_vector |= 0x01; // temporary...for sid 1
   last_tmp=pmsg->temp; 
   last_temp_cnt=0;
   last_sid=pmsg->sid;
@@ -887,7 +900,8 @@ void radioRead() {
     flags &= ~WS_FLAG_ONCEFAIL;
     if(!nrf24.recv((uint8_t*)&msg, &len)) { err=7; alarms |= WS_ALR_WFAIL;}
     else if(WS_MSG_TEMP != msg.msgt) { err=8; alarms |= WS_ALR_BADMSG;}
-    else if(0==addHistAcc(&msg)) {err=0; alarms = 0;} // at the moment 
+    else if(0!=addHistAcc(&msg)) {err=9;  alarms |= WS_ALR_BAD_TEMP;} // at the moment 
+    else {err=0; alarms = 0;} 
   }
 }
 
