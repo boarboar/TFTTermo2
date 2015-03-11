@@ -376,7 +376,7 @@ void dispMain(uint8_t sid) {
     int16_t t;
     Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
-    t=Tft.drawString(last_tmp!=DS18_MEAS_NONE ? printTemp(last_tmp) : " --.--", 0, WS_SCREEN_TEMP_LINE_Y);
+    t=Tft.drawString(last_tmp!=DS18_MEAS_NONE ? printTemp(last_tmp) : " --.-", 0, WS_SCREEN_TEMP_LINE_Y);
     Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
     Tft.setSize(WS_CHAR_TEMP_SZ/2);
     t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
@@ -601,14 +601,14 @@ void printStat() {
    if(lst) {
      line_printn(itoa(lst->getVal(TH_HIST_VAL_T), buf, 10));
      line_printn(" ");
-     line_printn(itoa(lst->getVal(TH_HIST_VAL_V), buf, 10));
+     line_print(itoa(lst->getVal(TH_HIST_VAL_V), buf, 10));
    } else line_print("");
    lst=mHist.getData(1, 1);  
    line_printn("PRV="); 
    if(lst) {
      line_printn(itoa(lst->getVal(TH_HIST_VAL_T), buf, 10));
      line_printn(" ");
-     line_printn(itoa(lst->getVal(TH_HIST_VAL_V), buf, 10));
+     line_print(itoa(lst->getVal(TH_HIST_VAL_V), buf, 10));
    } else line_print("");
    }
    //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));

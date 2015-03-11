@@ -51,7 +51,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
     //hist[0].temp=(acc.temp/acc.cnt/TH_HIST_DV_T);
     //hist[0].vcc=(acc.vcc/acc.cnt/TH_HIST_DV_V);
     hist[0].temp=temp/TH_HIST_DV_T;
-    hist[0].vcc=vcc/TH_HIST_DV_T;
+    hist[0].vcc=vcc/TH_HIST_DV_V;
     hist[0].mins=mins;
     hist[0].sid=sid;
     acc_prev_time_m=millis()/60000L;
