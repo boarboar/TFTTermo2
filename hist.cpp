@@ -24,6 +24,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   uint8_t i, cnt;
   uint16_t mins_th, mins;
   mins=interval_m(acc_prev_time_m); //time lapsed from previous storage
+  // sid IS IGNORED!!! acc_prev_time_m should be sid specific!!!
   /*  
   acc.cnt++;
   acc.temp+=temp;
@@ -33,6 +34,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
     */
     // compress first
     // test implementation...
+    // sid IS IGNORED!!!
     i=0; mins_th=mins; // start at head with 15 minutes   
     while(mins_th<TH_ROLLUP_THR) {
       cnt=0;
@@ -77,11 +79,14 @@ TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
   else return hist+i;
 }
 
+/*
 int16_t TempHistory::getDiff(int16_t val, uint8_t sid) {
   if(TH_ISEMPTY(0)) return 0;
   return val-(int16_t)hist[0].temp*TH_HIST_DV_T;
 }
+*/
 
+// should be SID - specific!!!
 void TempHistory::iterBegin() { 
   iter_ptr=0xff;  
   iter_mbefore=interval_m(acc_prev_time_m); // time lapsed from latest storage

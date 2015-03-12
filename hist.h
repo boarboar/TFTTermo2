@@ -37,7 +37,7 @@ public:
     TempHistory();
     void init();
     boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);
-    int16_t getDiff(int16_t val, uint8_t sid);
+    //int16_t getDiff(int16_t val, uint8_t sid);
     uint8_t getSz();
     //wt_msg_hist *getData() { return hist; }
     wt_msg_hist *getData(uint8_t sid, uint8_t pos);

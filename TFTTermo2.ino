@@ -127,8 +127,8 @@ uint8_t alarms=0;
 uint16_t msgcnt=0;
 
 // ************************ HIST
-int16_t last_tmp=DS18_MEAS_NONE, last_vcc=0;
-uint8_t chg_vector=0;
+//int16_t last_tmp=DS18_MEAS_NONE, last_vcc=0;
+//uint8_t chg_vector=0;
 uint8_t last_sid=0xFF; 
 
 uint16_t last_temp_cnt=0;
@@ -338,7 +338,7 @@ void updateScreen() {
   switch(uilev) {
     case WS_UI_MAIN: {      
      dispMain(1);
-     chg_vector=0;
+     //chg_vector=0;
      if(!(flags&WS_FLAG_NOUPDATE)) updateScreenTime(true);   
      }      
      break;
@@ -372,22 +372,32 @@ void updateScreen() {
 }
 
 void dispMain(uint8_t sid) {
-  if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) { 
+  TempHistory::wt_msg_hist *l=mHist.getData(sid, 0);  
+  TempHistory::wt_msg_hist *p=mHist.getData(sid, 1);  
+//  if((chg_vector&0x01 || !(flags&WS_FLAG_NOUPDATE)) && last_tmp!=TH_NODATA) {     
+  if(!(flags&WS_FLAG_NOUPDATE) || !l || (l && p && l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
     int16_t t;
     Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
-    t=Tft.drawString(last_tmp!=DS18_MEAS_NONE ? printTemp(last_tmp) : " --.-", 0, WS_SCREEN_TEMP_LINE_Y);
+    //t=Tft.drawString(last_tmp!=DS18_MEAS_NONE ? printTemp(last_tmp) : " --.-", 0, WS_SCREEN_TEMP_LINE_Y);
+    t=Tft.drawString(l ? printTemp(l->getVal(TH_HIST_VAL_T)) : " --.-", 0, WS_SCREEN_TEMP_LINE_Y);
     Tft.drawString("  ", t, WS_SCREEN_TEMP_LINE_Y); // clear space
     Tft.setSize(WS_CHAR_TEMP_SZ/2);
     t=Tft.drawString("o", t, WS_SCREEN_TEMP_LINE_Y); // grad
     Tft.drawString("C", t, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);
     Tft.setColor(YELLOW);
-    t=mHist.getDiff(last_tmp, 1);
+    //t=mHist.getDiff(last_tmp, 1);
+    if(!l || !p) t=0;
+    else t=l->getVal(TH_HIST_VAL_T)-p->getVal(TH_HIST_VAL_T);
     Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, 80);    
     lcd_defaults();
   }
-  if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
-    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y); line_printn(last_vcc>0 ? printVcc(last_vcc) : "-.--"); line_printn("v");
+//  if(chg_vector&0x10 || !(flags&WS_FLAG_NOUPDATE)) {
+  if(!(flags&WS_FLAG_NOUPDATE) || !l || (l && p && l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
+    line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y); 
+    //line_printn(last_vcc>0 ? printVcc(last_vcc) : "-.--"); 
+    line_printn(l ? printVcc(l->getVal(TH_HIST_VAL_V)) : "-.--"); 
+    line_printn("v");
   }     
 }
 
@@ -396,7 +406,6 @@ void updateScreenTime(bool reset) {
   
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
-    //dispTimeout((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, 0, 160);    
     dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
   } else if(uilev==WS_UI_SET) {
       if(!editmode) sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
@@ -443,21 +452,6 @@ static byte p_to[2]={-1,-1};
 static byte p_hours=-1;
 
 // buf 4
-/*
-void dispTimeout(uint32_t ts, bool reset, int x, int y) {
-  byte tmp[3];  
-  if(reset) p_days=-1;
-  tmp[2]=ts%60; tmp[1]=(ts/60)%60; tmp[0]=(ts/3600)%24;
-  uint8_t days=ts/3600/24;  
-  if(days>0 && days!=p_days) {
-    line_printn("> "); line_printn(itoas(days)); line_printn(" days");    
-    p_days=days;
-  }
-  else {
-     disp_dig(reset, 3, tmp, p_to, x, y, WS_CHAR_DEF_SIZE);
-  }     
-}
-*/
 
 void dispTimeoutTemp(uint32_t ts, bool reset, int x, int y) {
   byte tmp[2];  
@@ -655,24 +649,23 @@ void chartHist(uint8_t sid) {
   int16_t xr, x0;     
   
   {
-  uint16_t mbefore=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
-  xr=(int32_t)mbefore/chart_xstep_denom;
+  uint16_t m=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
+  xr=(int32_t)m/chart_xstep_denom;
   if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1; 
   drawVertDashLine(xr, BLUE);
   if(xr>12) { // draw midnight lines  // do something with this block. Too many local vars!
     DateTime now = RTC.now();
-    uint16_t mid = now.hour()*60+now.minute();
     uint8_t dw=now.dayOfWeek();
+    m = now.hour()*60+now.minute(); // midday
     // note - now is not needed anymore. Or - unionize with buf
-    // mbefore is not needed! can be utilized instead of mid
     while(1) {  
-      x0=xr-(int32_t)mid/chart_xstep_denom;
+      x0=xr-(int32_t)m/chart_xstep_denom;
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       line_setpos(x0, 224);
       line_printn(now.dayOfWeekStr(dw));
-      mid+=1440; // mins in 24h
+      m+=1440; // mins in 24h
       if(dw) dw--; else dw=7;
     }
   }
@@ -843,21 +836,35 @@ void line_printn(const char* pbuf) {
 
 /****************** HIST ****************/
 
+
 uint8_t addHistAcc(struct wt_msg *pmsg) {
-  chg_vector=0;
-  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; // temporary...for sid 1
-  last_vcc=pmsg->vcc;
+  //chg_vector=0;
   if(DS18_MEAS_FAIL==pmsg->temp) {
     //alarms |= WS_ALR_BAD_TEMP;
     return 1;
   }
+  /*
+  if(last_vcc!=pmsg->vcc) chg_vector |= 0x10; // temporary...for sid 1
+  last_vcc=pmsg->vcc;
   if(last_tmp!=pmsg->temp) chg_vector |= 0x01; // temporary...for sid 1
   last_tmp=pmsg->temp; 
+  */
   last_temp_cnt=0;
   last_sid=pmsg->sid;
   msgcnt++;
   if(pmsg->sid!=1) return 0; // for time being
-  mHist.addAcc(last_tmp, last_vcc, last_sid);
+  //mHist.addAcc(last_tmp, last_vcc, last_sid);
+  mHist.addAcc(pmsg->temp, pmsg->vcc, last_sid);
+
+/*
+  TempHistory::wt_msg_hist *l=mHist.getData(pmsg->sid, 0);   
+  TempHistory::wt_msg_hist *p=mHist.getData(pmsg->sid, 1);
+  if(!l || !p) {  chg_vector |= 0x11; } // temporary...for sid 1
+  else { // temporary...for sid 1
+    if(l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T)) chg_vector |= 0x01;
+    if(l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V)) chg_vector |= 0x10;
+  }
+*/
   return 0;
 }
 
