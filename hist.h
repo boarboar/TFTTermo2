@@ -2,7 +2,8 @@
 // effective storage is TH_HIST_SZ-1
 //#define TH_HIST_SZ  24
 #define TH_HIST_SZ  26
-#define TH_ACC_TIME  14 //mins
+#define TH_SID_SZ  2
+//#define TH_ACC_TIME  14 //mins
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2
 #define TH_HIST_VAL_T 0
@@ -37,9 +38,7 @@ public:
     TempHistory();
     void init();
     boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);
-    //int16_t getDiff(int16_t val, uint8_t sid);
     uint8_t getSz();
-    //wt_msg_hist *getData() { return hist; }
     wt_msg_hist *getData(uint8_t sid, uint8_t pos);
     void iterBegin();
     boolean movePrev(); 
@@ -47,14 +46,13 @@ public:
     inline boolean isHead() {return !iter_ptr;} 
     inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr);} 
     uint16_t     getPrevMinsBefore() { return iter_mbefore; }
-    inline uint8_t  getHeadDelay() { return interval_m(acc_prev_time_m); }
+    uint8_t  getHeadDelay(uint8_t sid);
     uint8_t check(); // check if corrupted 
     static uint8_t interval_m(uint8_t prev);
 protected:
     uint16_t compress(uint8_t level);
     wt_msg_hist hist[TH_HIST_SZ];
-    //wt_msg_acc acc;
-    uint8_t acc_prev_time_m;
+    uint8_t acc_prev_time_m[TH_SID_SZ];
     uint8_t iter_ptr;
     uint16_t iter_mbefore; 
 };

@@ -16,54 +16,42 @@ TempHistory::TempHistory() {
 }
 
 void TempHistory::init() {
-  for(uint8_t i=0; i<TH_HIST_SZ; i++) { TH_SETEMPTY(i); hist[i].temp=0; hist[i].vcc=0; }
-  acc_prev_time_m=millis()/60000L;
+  uint8_t i;
+  for(i=0; i<TH_HIST_SZ; i++) { TH_SETEMPTY(i); hist[i].temp=0; hist[i].vcc=0; }
+  for(i=0; i<TH_SID_SZ; i++) acc_prev_time_m[i]=millis()/60000L;
 }
 
 boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   uint8_t i, cnt;
   uint16_t mins_th, mins;
-  mins=interval_m(acc_prev_time_m); //time lapsed from previous storage
-  // sid IS IGNORED!!! acc_prev_time_m should be sid specific!!!
-  /*  
-  acc.cnt++;
-  acc.temp+=temp;
-  acc.vcc+=vcc;  
-  if(mins>=TH_ACC_TIME) { 
-    // add to hist 
-    */
-    // compress first
-    // test implementation...
-    // sid IS IGNORED!!!
-    i=0; mins_th=mins; // start at head with 15 minutes   
-    while(mins_th<TH_ROLLUP_THR) {
-      cnt=0;
-      while(i<TH_HIST_SZ && !TH_ISEMPTY(i) && hist[i].mins<mins_th+10) { i++; cnt++; }
-      if(cnt>2) {
+  sid--;
+  if(sid>=TH_SID_SZ) return false;
+  mins=interval_m(acc_prev_time_m[sid]); //time lapsed from previous storage
+  
+  // compress first
+  // test implementation...
+  // sid IS IGNORED!!!
+  i=0; mins_th=mins; // start at head with 15 minutes   
+  while(mins_th<TH_ROLLUP_THR) {
+    cnt=0;
+    while(i<TH_HIST_SZ && !TH_ISEMPTY(i) && hist[i].mins<mins_th+10) { i++; cnt++; }
+    if(cnt>2) {
         i-=2; // step back for two positions
         hist[i].temp=(hist[i].temp+hist[i+1].temp)/2;
         hist[i].vcc=(hist[i].vcc+hist[i+1].vcc)/2;
         hist[i].mins=mins_th=hist[i].mins+hist[i+1].mins;
         for(cnt=i+1; cnt<TH_HIST_SZ-1; cnt++) hist[cnt]=hist[cnt+1]; // shift tail left // reuse cnt 
-        TH_SETEMPTY(TH_HIST_SZ-1); //!!! now vacant
+        TH_SETEMPTY(TH_HIST_SZ-1); // now vacant
       } else break;
-    } 
-    for(i=TH_HIST_SZ-1; i>0; i--) hist[i]=hist[i-1]; // shift all right
-    // add head
-    //hist[0].temp=(acc.temp/acc.cnt/TH_HIST_DV_T);
-    //hist[0].vcc=(acc.vcc/acc.cnt/TH_HIST_DV_V);
-    hist[0].temp=temp/TH_HIST_DV_T;
-    hist[0].vcc=vcc/TH_HIST_DV_V;
-    hist[0].mins=mins;
-    hist[0].sid=sid;
-    acc_prev_time_m=millis()/60000L;
-    //acc.temp=0;
-    //acc.vcc=0;
-    //acc.cnt=0;
-    return true;
-    /*
-  } else return false;
-  */
+  } 
+  for(i=TH_HIST_SZ-1; i>0; i--) hist[i]=hist[i-1]; // shift all right
+  // add head
+  hist[0].temp=temp/TH_HIST_DV_T;
+  hist[0].vcc=vcc/TH_HIST_DV_V;
+  hist[0].mins=mins;
+  hist[0].sid=sid;
+  acc_prev_time_m[sid]=millis()/60000L;
+  return true;
 }
 
 TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
@@ -79,17 +67,16 @@ TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
   else return hist+i;
 }
 
-/*
-int16_t TempHistory::getDiff(int16_t val, uint8_t sid) {
-  if(TH_ISEMPTY(0)) return 0;
-  return val-(int16_t)hist[0].temp*TH_HIST_DV_T;
+uint8_t  TempHistory::getHeadDelay(uint8_t sid) { 
+  sid--;
+  if(sid>=TH_SID_SZ) return 0;
+  return interval_m(acc_prev_time_m[sid]); 
 }
-*/
 
-// should be SID - specific!!!
+// *** should be SID - specific!!!
 void TempHistory::iterBegin() { 
   iter_ptr=0xff;  
-  iter_mbefore=interval_m(acc_prev_time_m); // time lapsed from latest storage
+  iter_mbefore=interval_m(acc_prev_time_m[0]); // time lapsed from latest storage
 }
 
 boolean TempHistory::movePrev() {
@@ -98,6 +85,7 @@ boolean TempHistory::movePrev() {
   iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
   return true;
 } 
+// ***
 
 uint8_t TempHistory::getSz() {
   uint8_t i=0;
