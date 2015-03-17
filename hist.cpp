@@ -24,9 +24,8 @@ void TempHistory::init() {
 boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   uint8_t i, cnt;
   uint16_t mins_th, mins;
-  sid--;
-  if(sid>=TH_SID_SZ) return false;
-  mins=interval_m(acc_prev_time_m[sid]); //time lapsed from previous storage
+  if(sid>TH_SID_SZ) return false;
+  mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage
   
   // compress first
   // test implementation...
@@ -50,7 +49,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   hist[0].vcc=vcc/TH_HIST_DV_V;
   hist[0].mins=mins;
   hist[0].sid=sid;
-  acc_prev_time_m[sid]=millis()/60000L;
+  acc_prev_time_m[sid-1]=millis()/60000L;
   return true;
 }
 

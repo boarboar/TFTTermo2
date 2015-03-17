@@ -245,7 +245,7 @@ void loop()
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
        //if(!(alarms&WS_ALR_TO) && (uint32_t)last_temp_cnt*WS_UI_CYCLE/60000>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
-       if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(0)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
+       if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen();       
      }
@@ -340,6 +340,7 @@ void updateScreen() {
      if(flags&WS_FLAG_NOUPDATE) dispMain(last_sid);
      else {
        dispMain(1);
+       dispMain(2);
        updateScreenTime(true);   
       }
      }      
@@ -377,7 +378,7 @@ void dispMain(uint8_t sid) {
   TempHistory::wt_msg_hist *l=mHist.getData(sid, 0);  
   TempHistory::wt_msg_hist *p=mHist.getData(sid, 1);  
   uint16_t y=WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1);
-  if(!(flags&WS_FLAG_NOUPDATE) || !l || (l && p && l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
+  if(!(flags&WS_FLAG_NOUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
     int16_t t;
     Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
@@ -389,11 +390,11 @@ void dispMain(uint8_t sid) {
     Tft.setColor(YELLOW);
     if(!l || !p) t=0;
     else t=l->getVal(TH_HIST_VAL_T)-p->getVal(TH_HIST_VAL_T);
-    Tft.setSize(WS_CHAR_TEMP_SZ);
+    //Tft.setSize(WS_CHAR_TEMP_SZ);
     Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
     lcd_defaults();
   }
-  if(!(flags&WS_FLAG_NOUPDATE) || !l || (l && p && l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
+  if(!(flags&WS_FLAG_NOUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
     line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, y); 
     line_printn(l ? printVcc(l->getVal(TH_HIST_VAL_V)) : "-.--"); 
     line_printn("v");
@@ -406,7 +407,7 @@ void updateScreenTime(bool reset) {
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
     //dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
-    dispTimeoutTempM((uint16_t)mHist.getHeadDelay(0)*60L, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
+    dispTimeoutTempM((uint16_t)mHist.getHeadDelay(1)*60L, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
   } else if(uilev==WS_UI_SET) {
       if(!editmode) sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
   }
@@ -601,7 +602,7 @@ void printStat() {
    //line_printn("DUR: "); dispTimeout((uint32_t)mHist.getPrevMinsBefore()*60, true, line_getposx(), line_getpos()); line_print("");      
    line_printn("DUR: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
-   line_printn("HDL="); line_print(itoas(mHist.getHeadDelay(0)));   
+   line_printn("HDL="); line_print(itoas(mHist.getHeadDelay(1)));   
    //line_printn("TMO="); line_print(itoa(last_temp_cnt, buf, 10));
    line_printn("CHK="); line_print(itoas(mHist.check()));  
    { // this is for test only!
@@ -858,7 +859,7 @@ uint8_t addHistAcc(struct wt_msg *pmsg) {
   //last_temp_cnt=0;
   last_sid=pmsg->sid;
   msgcnt++;
-  if(pmsg->sid!=1) return 0; // for time being
+  //if(pmsg->sid!=1) return 0; // for time being
   mHist.addAcc(pmsg->temp, pmsg->vcc, last_sid);
   return 0;
 }
