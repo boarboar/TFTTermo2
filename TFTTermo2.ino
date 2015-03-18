@@ -406,8 +406,9 @@ void updateScreenTime(bool reset) {
   
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
-    //dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
-    dispTimeoutTempM((uint16_t)mHist.getHeadDelay(1)*60L, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);    
+    //dispTimeoutTemp((uint32_t)last_temp_cnt*WS_UI_CYCLE/1000, reset, WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+FONT_Y*WS_CHAR_TEMP_SZ/2);       
+    dispTimeoutTempM(1, reset);    
+    dispTimeoutTempM(2, reset);    
   } else if(uilev==WS_UI_SET) {
       if(!editmode) sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
   }
@@ -449,8 +450,10 @@ char *printVal(uint8_t type, int16_t val) {
 static byte p_time[3]={-1,-1,-1};
 //static byte p_to[3]={-1,-1,-1};
 //static byte p_days=-1;
-static byte p_to[2]={-1,-1};
-static byte p_hours=-1;
+//static byte p_to[2]={-1,-1};
+//static byte p_hours=-1;
+//static byte p_mins=-1;
+static uint8_t p_to[2];
 
 // buf 4
 
@@ -470,29 +473,53 @@ void dispTimeoutTemp(uint32_t ts, bool reset, int x, int y) {
 }
 */
 
-void dispTimeoutTempM(uint16_t ts, bool reset, int x, int y) {
-  byte tmp[2];  
-  byte hours;
-  if(reset) p_hours=-1;
-  tmp[1]=ts%60; tmp[0]=(ts/60)%60; hours=(ts/3600)%24;
-  if(hours>0 && hours!=p_hours) {
-    line_printn("> "); line_printn(itoas(hours)); line_printn(" H");    
-    p_hours=hours;
+void dispTimeoutTempM(uint8_t sid, bool reset/*, int x, int y*/) {
+  //byte tmp[2];  
+  //byte hours;
+  //if(reset) p_hours=-1;
+  //tmp[1]=ts%60; tmp[0]=(ts/60)%60; hours=(ts/3600)%24;
+  line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1)+FONT_Y*WS_CHAR_TEMP_SZ/2);
+  uint8_t tm=mHist.getHeadDelay(sid);
+  
+  /*
+  uint8_t hm=tm/60;
+  if(hm>0 && (hm!=p_hours || reset)) {
+    line_printn("> "); line_printn(itoas(hm)); line_printn(" H");    
+    p_hours=hm;
   }
   else {
-     disp_dig(reset, 2, tmp, p_to, x, y, WS_CHAR_DEF_SIZE);
-  }     
+     //disp_dig(reset, 2, tmp, p_to, x, y, WS_CHAR_DEF_SIZE);
+     hm=tm%60;
+     if(hm!=p_mins || reset) {
+       line_printn(itoas2(hm)); line_printn(":00");
+       p_mins=hm;
+     }
+  } */    
+  
+  if(tm != p_to[sid-1] || reset) {
+    uint8_t hm=tm/60;
+    if(hm>0) {
+      line_printn(">"); line_printn(itoas2(hm)); line_printn(" H");    
+    }
+    else {
+      hm=tm%60;
+      line_printn(itoas2(hm)); line_printn(":00");
+    }
+    p_to[sid-1]=tm;
+  }
 }
 
 void dispTimeoutStatic(uint32_t ts) {
-  byte tmp[3];  
-  tmp[2]=ts%60; tmp[1]=(ts/60)%60; tmp[0]=(ts/3600)%24;
+  //byte tmp[3];  
+  //tmp[2]=ts%60; tmp[1]=(ts/60)%60; tmp[0]=(ts/3600)%24;
   uint8_t days=ts/3600/24;  
   if(days>0) {
     line_printn("> "); line_printn(itoas(days)); line_printn(" days");    
   }
   else {
-     disp_dig(true, 3, tmp, 0, line_getposx(), line_getpos(), WS_CHAR_DEF_SIZE);
+     //disp_dig(true, 3, tmp, 0, line_getposx(), line_getpos(), WS_CHAR_DEF_SIZE);
+//     line_printn(itoas2(tmp[0])); line_printn(":"); line_printn(itoas2(tmp[1])); line_printn(":"); line_printn(itoas2(tmp[2]));
+     line_printn(itoas2((ts/3600)%24)); line_printn(":"); line_printn(itoas2((ts/60)%60)); line_printn(":"); line_printn(itoas2(ts%60));
   }     
 }
 

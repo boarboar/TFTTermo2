@@ -11,7 +11,8 @@
 
 #define TH_NODATA 0x0FFF
 #define TH_SEMPTY 0xFFF
-#define TH_ROLLUP_THR 244
+//#define TH_ROLLUP_THR 244
+#define TH_ROLLUP_THR 260
 
 #define TH_SETEMPTY(I) (hist[I].mins=TH_SEMPTY)
 #define TH_ISEMPTY(I)  (hist[I].mins==TH_SEMPTY)
