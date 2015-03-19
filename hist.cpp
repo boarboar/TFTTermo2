@@ -110,7 +110,7 @@ boolean TempHistory::movePrev() {
   //iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
   //return true;
   
-  while(iter_ptr<TH_HIST_SZ || !TH_ISEMPTY(iter_ptr)) {
+  while(iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr)) {
     if(iter_sid==0xFF || hist[iter_ptr].sid==iter_sid) {
       iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
       return true;

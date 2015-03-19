@@ -317,7 +317,7 @@ void processShortRightClick() {
   }
   if(uilev==WS_UI_HIST) {
     Tft.fillScreen();
-    pageidx=printHist(1, pageidx);
+    pageidx=printHist(0xFF, pageidx);
     return;
   }
   if(uilev!=WS_UI_SET) return;
