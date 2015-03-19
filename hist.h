@@ -41,7 +41,7 @@ public:
     boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);
     uint8_t getSz();
     wt_msg_hist *getData(uint8_t sid, uint8_t pos);
-    void iterBegin();
+    void iterBegin(uint8_t sid);
     boolean movePrev(); 
     wt_msg_hist *getPrev() { return hist+iter_ptr; }
     inline boolean isHead() {return !iter_ptr;} 
@@ -55,5 +55,6 @@ protected:
     wt_msg_hist hist[TH_HIST_SZ];
     uint8_t acc_prev_time_m[TH_SID_SZ];
     uint8_t iter_ptr;
+    uint8_t iter_sid;
     uint16_t iter_mbefore; 
 };

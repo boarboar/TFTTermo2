@@ -96,19 +96,29 @@ uint8_t  TempHistory::getHeadDelay(uint8_t sid) {
   return interval_m(acc_prev_time_m[sid]); 
 }
 
-// *** should be SID - specific!!!
-void TempHistory::iterBegin() { 
+void TempHistory::iterBegin(uint8_t sid) { 
   iter_ptr=0xff;  
-  iter_mbefore=interval_m(acc_prev_time_m[0]); // time lapsed from latest storage
+  iter_sid=sid;
+  // time lapsed from latest storage 
+  if(sid!=0xFF) iter_mbefore=interval_m(acc_prev_time_m[sid-1]); 
+  else iter_mbefore=interval_m(acc_prev_time_m[0]);  // should be MAX!!!
 }
 
 boolean TempHistory::movePrev() {
   iter_ptr++;
-  if(iter_ptr>TH_HIST_SZ-1 || TH_ISEMPTY(iter_ptr)) return false;
-  iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
-  return true;
+  //if(iter_ptr>TH_HIST_SZ-1 || TH_ISEMPTY(iter_ptr)) return false;
+  //iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
+  //return true;
+  
+  while(iter_ptr<TH_HIST_SZ || !TH_ISEMPTY(iter_ptr)) {
+    if(iter_sid==0xFF || hist[iter_ptr].sid==iter_sid) {
+      iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
+      return true;
+    }
+    iter_ptr++;
+  }
+  return false;
 } 
-// ***
 
 uint8_t TempHistory::getSz() {
   uint8_t i=0;
