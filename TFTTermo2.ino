@@ -117,7 +117,7 @@ NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
 RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 
 TempHistory mHist;
-wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
+//wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
 // state vars
 
@@ -313,7 +313,7 @@ void processShortRightClick() {
   if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
     if(++pageidx>=WS_CHART_NLEV) pageidx=0;
     Tft.fillScreen();    
-    chartHist(1);
+    chartHist();
     return;
   }
   if(uilev==WS_UI_HIST) {
@@ -351,7 +351,7 @@ void updateScreen() {
     case WS_UI_CHART: {
       pageidx=0;
       SETCHRT(TH_HIST_VAL_T);
-      chartHist(1);
+      chartHist();
       }
       break; 
     case WS_UI_CHART60: 
@@ -360,7 +360,7 @@ void updateScreen() {
     case WS_UI_CHART_VCC: {
       pageidx=0;
       SETCHRT(TH_HIST_VAL_V);
-      chartHist(1);
+      chartHist();
       }
       break;     
     case WS_UI_STAT: 
@@ -630,7 +630,7 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 }
 
 
-void chartHist(uint8_t _sid) {    
+void chartHist() {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
   //prepChart(sid, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
@@ -866,7 +866,7 @@ void radioSetup() {
 }
 
 void radioRead() {
-  //wt_msg msg; // eventually, will move it here
+  wt_msg msg; // eventually, will move it here
   uint8_t len=sizeof(msg); 
   if(!nrf24.available()) { 
    err=6; alarms |= WS_ALR_WFAIL; 

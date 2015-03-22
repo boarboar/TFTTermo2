@@ -1,7 +1,7 @@
 
 // effective storage is TH_HIST_SZ-1
 //#define TH_HIST_SZ  24
-#define TH_HIST_SZ  26
+#define TH_HIST_SZ  30
 #define TH_SID_SZ  2
 //#define TH_ACC_TIME  14 //mins
 #define TH_HIST_DV_T  5
@@ -12,7 +12,7 @@
 #define TH_NODATA 0x0FFF
 #define TH_SEMPTY 0xFFF
 //#define TH_ROLLUP_THR 244
-#define TH_ROLLUP_THR 260
+#define TH_ROLLUP_THR 300
 
 #define TH_SETEMPTY(I) (hist[I].mins=TH_SEMPTY)
 #define TH_ISEMPTY(I)  (hist[I].mins==TH_SEMPTY)
