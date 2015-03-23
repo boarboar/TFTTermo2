@@ -105,6 +105,7 @@
 const char *addr="wserv";
 
 const char *lnames[] = {"main", "stat", "hist", "chart", "chr60", "vcc", "set"};
+static const uint16_t cc[TH_SID_SZ]={CYAN, YELLOW};  
 
 struct wt_msg {
   uint8_t msgt;
@@ -321,6 +322,12 @@ void processShortRightClick() {
     pageidx=printHist(0xFF, pageidx);
     return;
   }
+  if(uilev==WS_UI_CHART60) {
+    if(++pageidx>=TH_SID_SZ) pageidx=0;
+    Tft.fillScreen();    
+    chartHist60();
+    return;
+  }
   if(uilev!=WS_UI_SET) return;
   if(!editmode) return;
   timeUp(editmode-1, WS_CHAR_TIME_SET_SZ);
@@ -355,7 +362,8 @@ void updateScreen() {
       }
       break; 
     case WS_UI_CHART60: 
-      chartHist60(1);
+      pageidx=0;
+      chartHist60();
       break;
     case WS_UI_CHART_VCC: {
       pageidx=0;
@@ -662,7 +670,7 @@ void chartHist() {
   }
   }
   {
-  static const uint16_t cc[TH_SID_SZ]={CYAN, YELLOW};  
+  
   int16_t y0;
   Tft.setThick(5);
   
@@ -684,11 +692,13 @@ void chartHist() {
 
 }
 
-void chartHist60(uint8_t sid) 
+void chartHist60() 
 {    
   const uint16_t DUR_24=24;
   const uint16_t DUR_MIN=60;
   const int16_t xstep = CHART_WIDTH/DUR_24;
+
+  uint8_t sid=pageidx+1;
 
   { // histogramm scope
   prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
@@ -699,7 +709,8 @@ void chartHist60(uint8_t sid)
   int16_t acc=0;
   uint8_t cnt=0;  
   uint8_t islot=0;
-  Tft.setBgColor(WHITE);  
+  //Tft.setBgColor(WHITE);  
+  Tft.setColor(cc[sid-1]);
   mHist.iterBegin(sid);
   do {
     uint8_t is;
@@ -765,6 +776,7 @@ void prepChart(uint8_t  sid, uint8_t type, uint16_t mbefore) {
   } while(mHist.movePrev() && mHist.getPrevMinsBefore()<mbefore);
 
   line_init();
+  if(sid!=0xFF) { line_printn(itoas(sid)); line_printn(": "); }
   line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
   
   if(mint%50) {
