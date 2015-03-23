@@ -710,7 +710,7 @@ void chartHist60()
   uint8_t cnt=0;  
   uint8_t islot=0;
   //Tft.setBgColor(WHITE);  
-  Tft.setColor(cc[sid-1]);
+  Tft.setBgColor(cc[sid-1]);
   mHist.iterBegin(sid);
   do {
     uint8_t is;
