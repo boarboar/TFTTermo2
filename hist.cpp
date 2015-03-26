@@ -22,22 +22,14 @@ void TempHistory::init() {
 }
 
 boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
-  //uint8_t i, cnt;
   uint8_t i, j;
   uint8_t ii[2];
   uint16_t mins_th, mins;
   if(sid>TH_SID_SZ) return false;
-  mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage
-  
-  // compress first
-  // test implementation...
-  // sid IS IGNORED!!!
+  mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage  
+  // compress 
   i=0; mins_th=mins+10; // start at head with 15 minutes   
   while(mins_th<TH_ROLLUP_THR) {
-    /*
-    cnt=0;
-    while(i<TH_HIST_SZ && !TH_ISEMPTY(i) && hist[i].mins<mins_th) { i++; cnt++; }
-    */
     j=0; // as a counter
     ii[0]=ii[1]=0; // not necessary
     while(i<TH_HIST_SZ && !TH_ISEMPTY(i)) {
@@ -48,14 +40,6 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
        i++;
     }
     if(j>2) {
-      /*
-        i-=2; // step back for two positions
-        hist[i].temp=(hist[i].temp+hist[i+1].temp)/2;
-        hist[i].vcc=(hist[i].vcc+hist[i+1].vcc)/2;
-        mins_th=hist[i].mins=hist[i].mins+hist[i+1].mins;
-        mins_th+=10;
-        for(cnt=i+1; cnt<TH_HIST_SZ-1; cnt++) hist[cnt]=hist[cnt+1]; // shift tail left // reuse cnt 
-        */
         i=ii[0];
         j=ii[1];
         hist[i].temp=(hist[i].temp+hist[j].temp)/2;
@@ -106,10 +90,6 @@ void TempHistory::iterBegin(uint8_t sid) {
 
 boolean TempHistory::movePrev() {
   iter_ptr++;
-  //if(iter_ptr>TH_HIST_SZ-1 || TH_ISEMPTY(iter_ptr)) return false;
-  //iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
-  //return true;
-  
   while(iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr)) {
     if(iter_sid==0xFF || hist[iter_ptr].sid==iter_sid) {
       iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 

@@ -43,7 +43,7 @@
 #define WS_ALR_LOWVCC_IDX 4
 #define WS_ALR_LAST_IDX 4
 
-#define WS_SENS_TIMEOUT_M 10 // minutes
+#define WS_SENS_TIMEOUT_M 30 // minutes
 
 #define DS18_MEAS_FAIL	9999  // Temporarily!
 #define DS18_MEAS_NONE  -999
@@ -149,7 +149,6 @@ uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
 uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
     
-//static byte p_time[2]={-1,-1};
 static uint8_t p_time[2]={0xFF, 0xFF};
 static uint8_t p_to[2]={0xFF, 0xFF};
 
@@ -247,7 +246,7 @@ void loop()
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
-       if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout            
+       if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeou, at the moment for SID1 only....           
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen();       
      }
@@ -388,7 +387,8 @@ void dispMain(uint8_t sid) {
   uint16_t y=WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1);
   if(!(flags&WS_FLAG_NOUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
     int16_t t;
-    Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
+    //Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
+    Tft.setColor(mHist.getHeadDelay(sid)>WS_SENS_TIMEOUT_M ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
     t=Tft.drawString(l ? printTemp(l->getVal(TH_HIST_VAL_T)) : " --.-", 0, y);
     Tft.drawString("  ", t, y); // clear space
@@ -478,11 +478,6 @@ void dispTimeoutStatic(uint32_t ts) {
 }
 
 void printTime(const DateTime& pDT, bool reset, int x, int y, int sz){
-  /*
-  byte tmp[2];  
-  tmp[0]=pDT.hour(); tmp[1]=pDT.minute(); 
-  disp_dig(reset, 2, tmp, p_time, x, y, sz);
-  */
   uint8_t h=pDT.hour(), m=pDT.minute(); 
   if(reset || h!=p_time[0] || m!=p_time[1]) {
     Tft.setSize(sz);
@@ -519,17 +514,7 @@ void timeUp(uint8_t dig, int sz) {
   Tft.setSize(sz);
   Tft.setColor(GREEN);
   Tft.drawChar('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
-  p_time[ig]=val;
-
-/*
-  byte tmp[2];
-  memcpy(tmp, p_time, 2);
-  tmp[ig]=val;
-  Tft.setSize(sz);
-  Tft.setColor(YELLOW);
-  disp_dig(false, 2, tmp, p_time, 0, WS_SCREEN_TIME_LINE_Y, sz);
-  */
-  
+  p_time[ig]=val; 
 }
 
 void timeStore() {
@@ -537,36 +522,6 @@ void timeStore() {
   set.setTime(p_time[0], p_time[1], 0);
   RTC.adjust(set); 
 }
-
-/* 
-redraw: always redraw
-ngrp: number of digit groups (hh:mm = 2, hh:mm:ss, yy:mm:dd = 3). Always 2 digits in a group
-data: ptr to new data. byte[ngrp]
-pdata: ptr to old data. byte[ngrp]
-x, y, sz - trivial
-delim: delimeter symbol. shown before every group except of first
-drdrm: always redraw separator (that's for blinking feature); 
-*/
-/*
-void disp_dig(byte redraw, byte ngrp, byte *data, byte *p_data, int x, int y, uint8_t sz) {
-  int posX=x;
-  for(byte igrp=0; igrp<ngrp; igrp++) {  
-    if(igrp) {
-      if(redraw) 
-        Tft.drawChar(':', posX, y);  
-      posX+=FONT_SPACE*sz;
-    }
-    for(byte isym=0; isym<2; isym++) {
-       byte div10=(isym==0?10:1);
-       byte dig=(data[igrp]/div10)%10;
-       if(redraw || !p_data || dig!=(p_data[igrp]/div10)%10)
-         Tft.drawChar('0'+dig,posX,y); 
-       posX+=FONT_SPACE*sz;
-    }
-    if(p_data) p_data[igrp]=data[igrp];
-  }    
-}
-*/
 
 // buf 4
 void dispErr() {
@@ -597,11 +552,12 @@ void printStat() {
    line_printn("NOW: "); printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
    line_printn("UPT: "); dispTimeoutStatic(millis()/1000); line_print("");
    line_printn("RTT: "); dispTimeoutStatic(now.unixtime()-rts); line_print("");
-   mHist.iterBegin(0xFF);  
+   mHist.iterBegin(1);  
    while(mHist.movePrev());
-   line_printn("DUR: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
+   line_printn("DUR1: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
-   line_printn("HDL="); line_print(itoas(mHist.getHeadDelay(1)));   
+   line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
+   if(TH_SID_SZ>1) { line_printn(", "); line_printn(itoas(mHist.getHeadDelay(2)));} else line_printn("");      
    line_printn("CHK="); line_print(itoas(mHist.check()));  
    //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
@@ -641,44 +597,45 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 void chartHist() {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
-  //prepChart(sid, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
+  uint8_t i;
+  int16_t xr, x0;     
+  int16_t y0;
+
   prepChart(0xFF, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
   if(maxt==mint) return;
- 
-  int16_t xr, x0;     
-  
   {
-  uint16_t m=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
-  xr=(int32_t)m/chart_xstep_denom;
+  //uint16_t m=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
+  xr=(int32_t)mHist.getPrevMinsBefore()/chart_xstep_denom;
   if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1; 
   drawVertDashLine(xr, BLUE);
   if(xr>12) { // draw midnight lines  // do something with this block. Too many local vars!
+    {
     DateTime now = RTC.now();
-    uint8_t dw=now.dayOfWeek();
-    m = now.hour()*60+now.minute(); // midday
+    i=now.dayOfWeek();
+    //m = now.hour()*60+now.minute(); // midday
+    y0 = now.hour()*60+now.minute(); // midday
     // note - now is not needed anymore. Or - unionize with buf
+    }
     while(1) {  
-      x0=xr-(int32_t)m/chart_xstep_denom;
+      //x0=xr-(int32_t)m/chart_xstep_denom;
+      x0=xr-(int32_t)y0/chart_xstep_denom;
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       line_setpos(x0, 224);
-      line_printn(now.dayOfWeekStr(dw));
-      m+=1440; // mins in 24h
-      if(dw) dw--; else dw=7;
+      line_printn(DateTime::dayOfWeekStr(i));
+      //m+=1440; // mins in 24h
+      y0+=1440; // mins in 24h
+      if(i) i--; else i=7;
     }
   }
   }
-  {
-  
-  int16_t y0;
-  Tft.setThick(5);
-  
-  for(uint8_t sid=1; sid<=TH_SID_SZ; sid++) {
-  Tft.setColor(cc[sid-1]);
+  {  
+  Tft.setThick(5);  
+  for(i=1; i<=TH_SID_SZ; i++) { // i for sid
+  Tft.setColor(cc[i-1]);
   x0=y0=0;
-  mHist.iterBegin(sid); mHist.movePrev();
-
+  mHist.iterBegin(i); mHist.movePrev();
   do {
     // we can unionize {y1, x1} with buf
     int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
@@ -698,22 +655,22 @@ void chartHist60()
   const uint16_t DUR_MIN=60;
   const int16_t xstep = CHART_WIDTH/DUR_24;
 
-  uint8_t sid=pageidx+1;
 
   { // histogramm scope
-  prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
-  if(maxt==mint) return;
-
-  int16_t y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
-  
-  int16_t acc=0;
+  uint8_t sid=pageidx+1;
   uint8_t cnt=0;  
   uint8_t islot=0;
-  //Tft.setBgColor(WHITE);  
+  uint8_t is;
+  int16_t acc=0;
+  int16_t y_z;
+  
+  prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
+  if(maxt==mint) return;
+  y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
   Tft.setBgColor(cc[sid-1]);
   mHist.iterBegin(sid);
   do {
-    uint8_t is;
+    //uint8_t is;
     if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
     else break;
     if(is>DUR_24) is=DUR_24;
