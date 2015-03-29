@@ -557,7 +557,7 @@ void printStat() {
    line_printn("DUR1: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
    line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
-   if(TH_SID_SZ>1) { line_printn(", "); line_printn(itoas(mHist.getHeadDelay(2)));} else line_printn("");      
+   if(TH_SID_SZ>1) { line_printn(", "); line_print(itoas(mHist.getHeadDelay(2)));} else line_print("");      
    line_printn("CHK="); line_print(itoas(mHist.check()));  
    //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
