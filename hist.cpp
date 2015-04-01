@@ -81,11 +81,18 @@ uint8_t  TempHistory::getHeadDelay(uint8_t sid) {
 }
 
 void TempHistory::iterBegin(uint8_t sid) { 
+  uint8_t mb;
   iter_ptr=0xff;  
   iter_sid=sid;
   // time lapsed from latest storage 
   if(sid!=0xFF) iter_mbefore=interval_m(acc_prev_time_m[sid-1]); 
-  else iter_mbefore=interval_m(acc_prev_time_m[0]);  // should be MAX!!!
+  else {
+    iter_mbefore=0;
+    for(sid=0; sid<TH_SID_SZ; sid++) {
+      mb=interval_m(acc_prev_time_m[sid]);
+      if(mb>iter_mbefore) iter_mbefore=mb;
+    }
+  }
 }
 
 boolean TempHistory::movePrev() {

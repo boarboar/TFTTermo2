@@ -52,7 +52,7 @@
 
 #define WS_FLAG_RFREAD    0x10
 #define WS_FLAG_ONCEFAIL  0x20
-#define WS_FLAG_NOUPDATE  0x40
+#define WS_FLAG_ONDATAUPDATE  0x40
 
 #define WS_NUILEV 7
 #define WS_UI_MAIN  0
@@ -213,7 +213,7 @@ void loop()
    radioRead();  
    if(err) dispErr();
    else {
-     flags |= WS_FLAG_NOUPDATE;
+     flags |= WS_FLAG_ONDATAUPDATE;
      updateScreen();
      dispStat("READ ");
    }
@@ -337,14 +337,14 @@ void updateScreen() {
   lcd_defaults();
   line_init();
 
-  if(!(flags&WS_FLAG_NOUPDATE)) {
+  if(!(flags&WS_FLAG_ONDATAUPDATE)) {
     Tft.fillScreen();
     Tft.drawString(lnames[uilev], 240, 0);
   }
    
   switch(uilev) {
     case WS_UI_MAIN: {           
-     if(flags&WS_FLAG_NOUPDATE) dispMain(last_sid);
+     if(flags&WS_FLAG_ONDATAUPDATE) dispMain(last_sid);
      else {
        for(uint8_t i=1; i<=TH_SID_SZ; i++) dispMain(i);
        updateScreenTime(true);   
@@ -378,16 +378,15 @@ void updateScreen() {
       break;
     default: break;
   }
-  flags &= ~WS_FLAG_NOUPDATE;
+  flags &= ~WS_FLAG_ONDATAUPDATE;
 }
 
 void dispMain(uint8_t sid) {
   TempHistory::wt_msg_hist *l=mHist.getData(sid, 0);  
   TempHistory::wt_msg_hist *p=mHist.getData(sid, 1);  
   uint16_t y=WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1);
-  if(!(flags&WS_FLAG_NOUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
+  if(!(flags&WS_FLAG_ONDATAUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
     int16_t t;
-    //Tft.setColor(alarms&WS_ALR_TO ? RED : GREEN);
     Tft.setColor(mHist.getHeadDelay(sid)>WS_SENS_TIMEOUT_M ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
     t=Tft.drawString(l ? printTemp(l->getVal(TH_HIST_VAL_T)) : " --.-", 0, y);
@@ -401,7 +400,7 @@ void dispMain(uint8_t sid) {
     Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
     lcd_defaults();
   }
-  if(!(flags&WS_FLAG_NOUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
+  if(!(flags&WS_FLAG_ONDATAUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
     line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, y); 
     line_printn(l ? printVcc(l->getVal(TH_HIST_VAL_V)) : "-.--"); 
     line_printn("v");
@@ -603,49 +602,45 @@ void chartHist() {
 
   prepChart(0xFF, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
   if(maxt==mint) return;
-  {
-  //uint16_t m=mHist.getPrevMinsBefore(); // minutes passed after the earliest measurement
-  xr=(int32_t)mHist.getPrevMinsBefore()/chart_xstep_denom;
+  
+  xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
   if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1; 
   drawVertDashLine(xr, BLUE);
   if(xr>12) { // draw midnight lines  // do something with this block. Too many local vars!
     {
     DateTime now = RTC.now();
     i=now.dayOfWeek();
-    //m = now.hour()*60+now.minute(); // midday
     y0 = now.hour()*60+now.minute(); // midday
-    // note - now is not needed anymore. Or - unionize with buf
     }
     while(1) {  
-      //x0=xr-(int32_t)m/chart_xstep_denom;
-      x0=xr-(int32_t)y0/chart_xstep_denom;
+      //x0=xr-(int32_t)y0/chart_xstep_denom;
+      x0=xr-y0/chart_xstep_denom;
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       line_setpos(x0, 224);
       line_printn(DateTime::dayOfWeekStr(i));
-      //m+=1440; // mins in 24h
       y0+=1440; // mins in 24h
       if(i) i--; else i=7;
     }
   }
-  }
-  {  
+  
+  
+    
   Tft.setThick(5);  
   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
-  Tft.setColor(cc[i-1]);
-  x0=y0=0;
-  mHist.iterBegin(i); mHist.movePrev();
-  do {
-    // we can unionize {y1, x1} with buf
-    int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
-    int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-    if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
-    x0=x1; y0=y1;
-  } while(mHist.movePrev() && x0>0);
-  }
+    Tft.setColor(cc[i-1]);
+    x0=y0=0;
+    mHist.iterBegin(i); 
+    if(mHist.movePrev()) do {
+      // we can unionize {y1, x1} with buf
+      int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
+      int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
+      if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
+      x0=x1; y0=y1;
+    } while(mHist.movePrev() && x0>0);
+  } //for sid
   
-} // sid
 
 }
 
@@ -670,7 +665,6 @@ void chartHist60()
   Tft.setBgColor(cc[sid-1]);
   mHist.iterBegin(sid);
   do {
-    //uint8_t is;
     if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
     else break;
     if(is>DUR_24) is=DUR_24;
@@ -724,14 +718,26 @@ int8_t startIter(uint8_t sid) {
 
 
 void prepChart(uint8_t  sid, uint8_t type, uint16_t mbefore) {
+  maxt=mint=0;
   if(!startIter(sid)) return;  
-  maxt=mint=mHist.getPrev()->getVal(type);
+  
+  uint8_t sid0, sid1;
+  maxt=-9999; mint=9999; // VERY BAD!!!!
+  if(sid!=0xFF) { sid0=sid; sid1=sid+1;}
+  else {sid0=0; sid1=TH_SID_SZ; }
+  
   do {
-    int16_t t = mHist.getPrev()->getVal(type);
-    if(t>maxt) maxt=t;
-    if(t<mint) mint=t;
-  } while(mHist.movePrev() && mHist.getPrevMinsBefore()<mbefore);
-
+    mHist.iterBegin(sid0);
+    if(mHist.movePrev()) {  
+    //maxt=mint=mHist.getPrev()->getVal(type); 
+      do {
+        int16_t t = mHist.getPrev()->getVal(type);
+        if(t>maxt) maxt=t;
+        if(t<mint) mint=t;
+      } while(mHist.movePrev() && mHist.getPrevMinsBefore()<mbefore);
+    }
+  } while(++sid0<sid1);
+  
   line_init();
   if(sid!=0xFF) { line_printn(itoas(sid)); line_printn(": "); }
   line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
