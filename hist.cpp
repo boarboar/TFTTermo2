@@ -45,7 +45,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
         hist[i].temp=(hist[i].temp+hist[j].temp)/2;
         hist[i].vcc=(hist[i].vcc+hist[j].vcc)/2;
         mins_th=hist[i].mins=hist[i].mins+hist[j].mins;
-        mins_th+=10;
+        mins_th+=10; // this constant requires some rethinking !!!!
         for(; j<TH_HIST_SZ-1; j++) hist[j]=hist[j+1]; // shift tail left // reuse cnt 
         TH_SETEMPTY(TH_HIST_SZ-1); // now vacant
       } else break;

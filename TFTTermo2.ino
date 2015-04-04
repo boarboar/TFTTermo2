@@ -719,12 +719,13 @@ int8_t startIter(uint8_t sid) {
 
 void prepChart(uint8_t  sid, uint8_t type, uint16_t mbefore) {
   maxt=mint=0;
-  if(!startIter(sid)) return;  
+  if(!startIter(sid)) return;
   
+  line_init(); 
   uint8_t sid0, sid1;
   maxt=-9999; mint=9999; // VERY BAD!!!!
-  if(sid!=0xFF) { sid0=sid; sid1=sid+1;}
-  else {sid0=0; sid1=TH_SID_SZ; }
+  if(sid!=0xFF) { sid0=sid1=sid; }
+  else {sid0=1; sid1=TH_SID_SZ; }
   
   do {
     mHist.iterBegin(sid0);
@@ -736,9 +737,10 @@ void prepChart(uint8_t  sid, uint8_t type, uint16_t mbefore) {
         if(t<mint) mint=t;
       } while(mHist.movePrev() && mHist.getPrevMinsBefore()<mbefore);
     }
-  } while(++sid0<sid1);
-  
-  line_init();
+    //line_printn("> "); line_printn(itoas(sid0)); line_printn(": ");
+    //line_printn(printVal(type, mint)); line_printn("..."); line_print(printVal(type, maxt));
+  } while(++sid0<=sid1);
+
   if(sid!=0xFF) { line_printn(itoas(sid)); line_printn(": "); }
   line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
   
