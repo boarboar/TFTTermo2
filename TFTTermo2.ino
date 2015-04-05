@@ -606,15 +606,17 @@ void chartHist() {
   xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
   if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1; 
   drawVertDashLine(xr, BLUE);
-  if(xr>12) { // draw midnight lines  // do something with this block. Too many local vars!
+  if(xr>12) { // draw midnight lines  
     {
     DateTime now = RTC.now();
     i=now.dayOfWeek();
     y0 = now.hour()*60+now.minute(); // midday
     }
+    line_print(""); // test
     while(1) {  
       //x0=xr-(int32_t)y0/chart_xstep_denom;
       x0=xr-y0/chart_xstep_denom;
+      line_printn(itoa(y0, buf, 10)); line_printn(", "); line_print(itoa(x0, buf, 10)); // test
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
