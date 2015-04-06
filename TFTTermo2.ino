@@ -621,7 +621,7 @@ void chartHist() {
     line_print(""); // test
     while(1) {  
       x0=xr-y0/chart_xstep_denom;
-      line_printn(itoa(y0, buf, 10)); line_printn(", "); line_printn(itoa(x0, buf, 10)); ; line_printn(", "); line_print(itoas(i)); // test
+      line_setpos(0, i*20); line_printn(itoa(y0, buf, 10)); line_printn(", "); line_printn(itoa(x0, buf, 10)); ; line_printn(", "); line_print(itoas(i)); // test
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
