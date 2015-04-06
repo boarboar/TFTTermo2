@@ -409,17 +409,23 @@ void dispMain(uint8_t sid) {
 
 void updateScreenTime(bool reset) {
   uint8_t sz=0;
-  
+  //DateTime now = RTC.now();
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
+    //printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
     for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
   } else if(uilev==WS_UI_SET) {
-      if(!editmode) sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
+      if(!editmode) {
+        sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
+        //printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
+      }
   }
+  
   if(sz) {
     DateTime now = RTC.now();
     printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
-  }  
+  } 
+  
 }
 
 // buf 5
@@ -614,16 +620,15 @@ void chartHist() {
     }
     line_print(""); // test
     while(1) {  
-      //x0=xr-(int32_t)y0/chart_xstep_denom;
       x0=xr-y0/chart_xstep_denom;
-      line_printn(itoa(y0, buf, 10)); line_printn(", "); line_print(itoa(x0, buf, 10)); // test
+      line_printn(itoa(y0, buf, 10)); line_printn(", "); line_printn(itoa(x0, buf, 10)); ; line_printn(", "); line_print(itoas(i)); // test
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
       line_setpos(x0, 224);
       line_printn(DateTime::dayOfWeekStr(i));
       y0+=1440; // mins in 24h
-      if(i) i--; else i=7;
+      if(i) i--; else i=6;
     }
   }
   
