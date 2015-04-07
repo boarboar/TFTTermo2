@@ -426,7 +426,7 @@ void updateScreenTime(bool reset) {
     if(reset || now.hour()!=p_time[0]) {
       Tft.setSize(sz/2);
       Tft.setColor(YELLOW);
-      line_setpos(FONT_SPACE*sz*8, WS_SCREEN_TIME_LINE_Y);
+      line_setpos(FONT_SPACE*sz*6, WS_SCREEN_TIME_LINE_Y);
       printDate(now);
     }
     printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
