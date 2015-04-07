@@ -423,6 +423,12 @@ void updateScreenTime(bool reset) {
   
   if(sz) {
     DateTime now = RTC.now();
+    if(reset || now.hour()!=p_time[0]) {
+      Tft.setSize(sz/2);
+      Tft.setColor(YELLOW);
+      line_setpos(FONT_SPACE*sz*8, WS_SCREEN_TIME_LINE_Y);
+      printDate(now);
+    }
     printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
   } 
   
@@ -492,12 +498,6 @@ void printTime(const DateTime& pDT, bool reset, int x, int y, int sz){
     p_time[0]=h; p_time[1]=m;
     lcd_defaults();
   }
-  /*
-  if(printdate) {
-    tmp[0]=pDT.day(); tmp[1]=pDT.month(); tmp[2]=pDT.year()-2000;
-    disp_dig(reset, 3, tmp, p_date, x+6*sz*FONT_SPACE, y, sz, '/', false);
-  }*/
-  
 }
 
 void printDate(const DateTime& pDT) {
