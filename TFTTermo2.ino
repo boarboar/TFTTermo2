@@ -76,6 +76,7 @@
 #define WS_SCREEN_TIME_LINE_Y  0
 #define WS_SCREEN_TEMP_LINE_Y  60
 #define WS_SCREEN_TEMP_LINE_PADDING 8
+#define WS_SCREEN_TITLE_X (WS_SCREEN_SIZE_X-4*WS_CHAR_DEF_SIZE*FONT_SPACE)
 
 #define WS_UI_CYCLE 50 
 #define WS_DISP_CNT    10  // in UI_CYCLEs (=0.5s)
@@ -104,7 +105,7 @@
 
 const char *addr="wserv";
 
-const char *lnames[] = {"main", "stat", "hist", "chart", "chr60", "vcc", "set"};
+const char *lnames[] = {"", "Stat", "Hist", "Temp", "Day", "Vcc", "Set"};
 static const uint16_t cc[TH_SID_SZ]={CYAN, YELLOW};  
 
 struct wt_msg {
@@ -339,7 +340,7 @@ void updateScreen() {
 
   if(!(flags&WS_FLAG_ONDATAUPDATE)) {
     Tft.fillScreen();
-    Tft.drawString(lnames[uilev], 240, 0);
+    Tft.drawString(lnames[uilev], WS_SCREEN_TITLE_X, 0);
   }
    
   switch(uilev) {
@@ -409,14 +410,22 @@ void dispMain(uint8_t sid) {
 
 void updateScreenTime(bool reset) {
   uint8_t sz=0;
+  uint8_t dsz;
+  uint16_t dy;
+  uint16_t dx;
   //DateTime now = RTC.now();
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
+    dsz=WS_CHAR_TIME_SZ/2;
+    dy=0;
+    dx=WS_CHAR_TIME_SZ*FONT_SPACE*8;
     //printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
     for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
   } else if(uilev==WS_UI_SET) {
       if(!editmode) {
-        sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
+        dsz=sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
+        dx=0;
+        dy=WS_CHAR_TIME_SET_SZ*FONT_Y;
         //printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
       }
   }
@@ -424,9 +433,9 @@ void updateScreenTime(bool reset) {
   if(sz) {
     DateTime now = RTC.now();
     if(reset || now.hour()!=p_time[0]) {
-      Tft.setSize(sz/2);
+      Tft.setSize(dsz);
       Tft.setColor(YELLOW);
-      line_setpos(FONT_SPACE*sz*6, WS_SCREEN_TIME_LINE_Y);
+      line_setpos(dx, dy);
       printDate(now);
     }
     printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
