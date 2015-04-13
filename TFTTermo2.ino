@@ -570,8 +570,8 @@ void printStat() {
    while(mHist.movePrev());
    line_printn("DUR1: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
-   line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
-   if(TH_SID_SZ>1) { line_printn(", "); line_print(itoas(mHist.getHeadDelay(2)));} else line_print("");      
+   //line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
+   //if(TH_SID_SZ>1) { line_printn(", "); line_print(itoas(mHist.getHeadDelay(2)));} else line_print("");      
    line_printn("CHK="); line_print(itoas(mHist.check()));  
    //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
@@ -627,10 +627,10 @@ void chartHist() {
     i=now.dayOfWeek();
     y0 = now.hour()*60+now.minute(); // midday
     }
-    line_print(""); // test
+    //line_print(""); // test
     while(1) {  
       x0=xr-y0/chart_xstep_denom;
-      line_setpos(0, i*20); line_printn(itoa(y0, buf, 10)); line_printn(", "); line_printn(itoa(x0, buf, 10)); ; line_printn(", "); line_print(itoas(i)); // test
+      //line_setpos(0, i*20); line_printn(itoa(y0, buf, 10)); line_printn(", "); line_printn(itoa(x0, buf, 10)); ; line_printn(", "); line_print(itoas(i)); // test
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
@@ -639,9 +639,7 @@ void chartHist() {
       y0+=1440; // mins in 24h
       if(i) i--; else i=6;
     }
-  }
-  
-  
+  }   
     
   Tft.setThick(5);  
   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
@@ -665,7 +663,6 @@ void chartHist60()
   const uint16_t DUR_24=24;
   const uint16_t DUR_MIN=60;
   const int16_t xstep = CHART_WIDTH/DUR_24;
-
 
   { // histogramm scope
   uint8_t sid=pageidx+1;
