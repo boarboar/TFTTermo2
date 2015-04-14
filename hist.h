@@ -1,9 +1,8 @@
 
 // effective storage is TH_HIST_SZ-1
-//#define TH_HIST_SZ  24
-#define TH_HIST_SZ  30
+//#define TH_HIST_SZ  29
+#define TH_HIST_SZ  31
 #define TH_SID_SZ  2
-//#define TH_ACC_TIME  14 //mins
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2
 #define TH_HIST_VAL_T 0
@@ -29,13 +28,14 @@ public:
     int8_t temp;    
     uint8_t vcc;    
   };
+  /*
   struct wt_msg_acc {
     uint8_t cnt;
     uint8_t mins; // mins since previous put
     int16_t temp;
     uint16_t vcc;
   };
-
+*/
     TempHistory();
     void init();
     boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);

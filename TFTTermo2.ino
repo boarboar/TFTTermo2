@@ -563,18 +563,21 @@ void hiLightDigit(uint16_t color) {
 
 void printStat() {
    DateTime now=RTC.now(); 
+   uint8_t i;
    line_printn("NOW: "); printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
    line_printn("UPT: "); dispTimeoutStatic(millis()/1000); line_print("");
    line_printn("RTT: "); dispTimeoutStatic(now.unixtime()-rts); line_print("");
-   mHist.iterBegin(1);  
-   while(mHist.movePrev());
-   line_printn("DUR1: "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
+   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
+     mHist.iterBegin(i);  
+     while(mHist.movePrev());
+     line_printn("DUR"); line_printn(itoas(i)); line_printn(": "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
+   }
    line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
    //line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
    //if(TH_SID_SZ>1) { line_printn(", "); line_print(itoas(mHist.getHeadDelay(2)));} else line_print("");      
    line_printn("CHK="); line_print(itoas(mHist.check()));  
    //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
-   for(uint8_t i=0; i<=WS_ALR_LAST_IDX; i++) {
+   for(i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
      if(alarms&(1<<i)) line_print("Y");
      else line_print("N");
