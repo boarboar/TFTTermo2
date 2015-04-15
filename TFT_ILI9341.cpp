@@ -258,7 +258,7 @@ void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
     }
 }
 */
-
+/*
 void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
 {   
     int16_t dx, dy;
@@ -282,7 +282,39 @@ void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
         }
     }
 }
-        
+*/
+
+void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
+{   
+    int16_t dx, dy;
+    if(x0>=x1) {dx=x1; x1=x0; x0=dx; dy=y1; y1=y0; y0=dy;}
+    dx=x1-x0;    
+    if(y0<y1) dy=y0-y1; else dy=y1-y0;
+    
+    int16_t err = dx+dy; // error value e_xy            
+    //INT8U th2=_size_mask_thick/2;
+    
+    setFillColor(LCD_FG);
+    
+    for (;;){                                                          
+        if (2*err >= dy) {                   // e_xy+e_x > 0                 
+            //drawVerticalLine(x0, y0-th2, _size_mask_thick);
+            if(x0>=0)
+              fillScreen(x0, x0, y0-_size_mask_thick/2, y0+_size_mask_thick/2); // TODO - expand
+            if (x0 == x1) break;
+            err += dy; x0++;
+        }
+        if (2*err <= dx) {                   // e_xy+e_y < 0                 
+            //drawHorizontalLine(x0-th2, y0, _size_mask_thick);
+            if(x0>=_size_mask_thick/2)
+              fillScreen(x0-_size_mask_thick/2, x0+_size_mask_thick/2, y0, y0); // TODO - expand
+            if (y0 == y1) break;
+            err += dx; 
+            if(y0<y1) y0++; else y0--;
+        }
+    }
+}
+
 /*        
 void TFT::drawRectangle(INT16 poX, INT16 poY, INT16U length, INT16U width)
 {
