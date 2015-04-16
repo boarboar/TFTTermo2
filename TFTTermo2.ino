@@ -108,11 +108,11 @@ const char *addr="wserv";
 const char *lnames[] = {"", "Stat", "Hist", "Temp", "Day", "Vcc", "Set"};
 static const uint16_t cc[TH_SID_SZ]={CYAN, YELLOW};  
 
-struct __attribute__((__packed__)) wt_msg {
-  int16_t temp;
-  int16_t vcc;
+struct wt_msg {
   uint8_t msgt;
   uint8_t sid;
+  int16_t temp;
+  int16_t vcc;
 }; 
 
 TempHistory mHist;
