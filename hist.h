@@ -1,7 +1,7 @@
 
 // effective storage is TH_HIST_SZ-1
 //#define TH_HIST_SZ  29
-#define TH_HIST_SZ  31
+#define TH_HIST_SZ  30
 #define TH_SID_SZ  2
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2
@@ -20,7 +20,7 @@
 
 class TempHistory {
 public:
-  class wt_msg_hist { // 4 bytes
+  class  __attribute__((__packed__)) wt_msg_hist { // 4 bytes
     public:
     int16_t getVal(uint8_t type) { return type==TH_HIST_VAL_T ? temp*TH_HIST_DV_T : vcc*TH_HIST_DV_V; }
     uint16_t mins : 12; // mins since previous pu (0..254*16). 0xFFF=empty slot
@@ -52,9 +52,9 @@ public:
     static uint8_t interval_m(uint8_t prev);
 protected:
     uint16_t compress(uint8_t level);
-    wt_msg_hist hist[TH_HIST_SZ];
-    uint8_t acc_prev_time_m[TH_SID_SZ];
+    uint16_t iter_mbefore;     
+    wt_msg_hist hist[TH_HIST_SZ];    
     uint8_t iter_ptr;
     uint8_t iter_sid;
-    uint16_t iter_mbefore; 
+    uint8_t acc_prev_time_m[TH_SID_SZ];
 };

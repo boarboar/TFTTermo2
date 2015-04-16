@@ -231,33 +231,7 @@ void TFT::drawStraightDashedLine(INT8U dir, INT16 poX, INT16 poY, INT16U length)
     while(length--) sendData((_size_mask_thick>>(length&0x07))&0x01 ? _fgColor : _bgColor);
 }
 */
-/*
-void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
-{   
-    int16_t dx, dy;
-    int16_t sx, sy; // too much vars on stack... do something... dx,dy,sx,sy are fixed through thr loop... 
-    
-    if(x0<x1) {dx=x1-x0; sx=1;} else {dx=x0-x1; sx=-1; }
-    if(y0<y1) {dy=y0-y1; sy=1;} else {dy=y1-y0; sy=-1; }
-    
-    int16_t err = dx+dy; // error value e_xy            
-    //int16_t  e2;                                                
-    INT8U th2=_size_mask_thick/2;
-    for (;;){                                                          
-        //e2 = 2*err;
-        if (2*err >= dy) {                   // e_xy+e_x > 0                 
-            drawVerticalLine(x0, y0-th2, _size_mask_thick);
-            if (x0 == x1) break;
-            err += dy; x0 += sx;
-        }
-        if (2*err <= dx) {                   // e_xy+e_y < 0                 
-            drawHorizontalLine(x0-th2, y0, _size_mask_thick);
-            if (y0 == y1) break;
-            err += dx; y0 += sy;
-        }
-    }
-}
-*/
+
 /*
 void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
 {   
@@ -293,21 +267,44 @@ void TFT::drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
     
     int16_t err = dx+dy; // error value e_xy            
     //INT8U th2=_size_mask_thick/2;
+    INT8U th2;
     
-    setFillColor(LCD_FG);
+    //setFillColor(LCD_FG);
     
     for (;;){                                                          
         if (2*err >= dy) {                   // e_xy+e_x > 0                 
-            //drawVerticalLine(x0, y0-th2, _size_mask_thick);
-            if(x0>=0)
-              fillScreen(x0, x0, y0-_size_mask_thick/2, y0+_size_mask_thick/2); // TODO - expand
+            if(x0>=0) { // draw vertical line at x0, length of _size_mask_thick : y0-_size_mask_thick/2 -  y0+_size_mask_thick/2
+              //fillScreen(x0, x0, y0-_size_mask_thick/2, y0+_size_mask_thick/2); // TODO - expand
+              th2=_size_mask_thick/2;
+              sendCMD(0x2A); sendData(x0); sendData(x0);
+              sendCMD(0x2B); sendData(y0-th2); sendData(y0+th2);
+              sendCMD(0x2c);
+              TFT_DC_HIGH;
+              TFT_CS_LOW;
+              th2=th2*2+1;
+              while(th2--) {
+                SPI.transfer(_fgColorH);
+                SPI.transfer(_fgColorL);
+              }
+            }
             if (x0 == x1) break;
             err += dy; x0++;
         }
         if (2*err <= dx) {                   // e_xy+e_y < 0                 
-            //drawHorizontalLine(x0-th2, y0, _size_mask_thick);
-            if(x0>=_size_mask_thick/2)
-              fillScreen(x0-_size_mask_thick/2, x0+_size_mask_thick/2, y0, y0); // TODO - expand
+            th2=_size_mask_thick/2;
+            if(x0>=th2) { // draw horizontal line at y0, length of _size_mask_thick : x0-_size_mask_thick/2 -  x0+_size_mask_thick/2
+              //fillScreen(x0-_size_mask_thick/2, x0+_size_mask_thick/2, y0, y0); // TODO - expand              
+              sendCMD(0x2A); sendData(x0-th2); sendData(x0+th2);
+              sendCMD(0x2B); sendData(y0); sendData(y0);
+              sendCMD(0x2c);
+              TFT_DC_HIGH;
+              TFT_CS_LOW;
+              th2=th2*2+1;
+              while(th2--) {
+                SPI.transfer(_fgColorH);
+                SPI.transfer(_fgColorL);
+              }
+            }
             if (y0 == y1) break;
             err += dx; 
             if(y0<y1) y0++; else y0--;
@@ -326,7 +323,7 @@ void TFT::drawRectangle(INT16 poX, INT16 poY, INT16U length, INT16U width)
 }
 */
 
-TFT Tft=TFT();
+//TFT Tft=TFT();
 /*********************************************************************************************************
   END FILE
 *********************************************************************************************************/

@@ -159,7 +159,7 @@ protected:
         
 };
 
-extern TFT Tft;
+//extern TFT Tft;
 
 #endif
 

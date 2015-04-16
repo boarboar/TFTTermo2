@@ -108,34 +108,40 @@ const char *addr="wserv";
 const char *lnames[] = {"", "Stat", "Hist", "Temp", "Day", "Vcc", "Set"};
 static const uint16_t cc[TH_SID_SZ]={CYAN, YELLOW};  
 
-struct wt_msg {
-  uint8_t msgt;
-  uint8_t sid;
+struct __attribute__((__packed__)) wt_msg {
   int16_t temp;
   int16_t vcc;
+  uint8_t msgt;
+  uint8_t sid;
 }; 
 
-NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
-RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
-
 TempHistory mHist;
-//wt_msg msg = {0xFF, 0xFF, 0xFFFF, 0xFFFF};
 
 // state vars
-
-uint8_t err=0; 
-volatile uint8_t flags=0; // chart type encoded in LO half
-
-uint8_t alarms=0;
-uint16_t msgcnt=0;
-
-// ************************ HIST
-uint8_t last_sid=0xFF; 
 
 // ************************ UI
 
 uint32_t mui;
 uint32_t rts=0; 
+uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
+uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
+
+uint16_t msgcnt=0;
+
+// trancient vars
+
+int16_t mint, maxt; // this is for charting
+char buf[6];
+
+uint8_t err=0; 
+volatile uint8_t flags=0; // chart type encoded in LO half
+
+uint8_t alarms=0;
+
+// ************************ HIST
+uint8_t last_sid=0xFF; 
+
+// ************************ UI
 
 uint8_t inact_cnt, disp_cnt=0;  
 uint8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
@@ -146,17 +152,12 @@ uint8_t uilev=WS_UI_MAIN;   // compress ?
 uint8_t pageidx=0; // compress ? combine with editmode?
 uint8_t editmode=0; // 0..4 compress ?
 
-uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
-uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
+TFT Tft;
+NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
+RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 
-    
 static uint8_t p_time[2]={0xFF, 0xFF};
 static uint8_t p_to[2]={0xFF, 0xFF};
-
-// trancient vars
-
-int16_t mint, maxt; // this is for charting
-char buf[6];
 
 void setup()
 {
