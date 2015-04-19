@@ -654,7 +654,8 @@ void chartHist() {
       // we can unionize {y1, x1} with buf
       int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
       int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-      if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
+      //if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
+      if(x0>0) Tft.drawLineThickLowRAM(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
       x0=x1; y0=y1;
     } while(mHist.movePrev() && x0>0);
   } //for sid
