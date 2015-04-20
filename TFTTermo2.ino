@@ -131,7 +131,11 @@ uint16_t msgcnt=0;
 // trancient vars
 
 int16_t mint, maxt; // this is for charting
-char buf[6];
+//char buf[6];
+union {
+  char buf[6];
+  struct { int16_t xr, x1, y1; } CV;
+} _S;
 
 uint8_t err=0; 
 volatile uint8_t flags=0; // chart type encoded in LO half
@@ -451,20 +455,20 @@ char *printTemp(int16_t disptemp) {
     s='-';
     disptemp=-disptemp;
   } else if(disptemp==0) s=' ';
-  buf[0]=s; 
-  itoa((uint8_t)(disptemp/10), buf+1, 10);
-  strcat(buf, ".");
-  itoa((uint8_t)(disptemp%10), buf+strlen(buf), 10);
-  return buf;
+  _S.buf[0]=s; 
+  itoa((uint8_t)(disptemp/10), _S.buf+1, 10);
+  strcat(_S.buf, ".");
+  itoa((uint8_t)(disptemp%10), _S.buf+strlen(_S.buf), 10);
+  return _S.buf;
 } 
 
 // buf 4
 char *printVcc(int16_t vcc) {
-  itoa((uint8_t)(vcc/100), buf, 10);
-  strcat(buf, ".");
-  if(vcc%100<10) strcat(buf, "0");
-  itoa((uint8_t)(vcc%100), buf+strlen(buf), 10);
-  return buf;
+  itoa((uint8_t)(vcc/100), _S.buf, 10);
+  strcat(_S.buf, ".");
+  if(vcc%100<10) strcat(_S.buf, "0");
+  itoa((uint8_t)(vcc%100), _S.buf+strlen(_S.buf), 10);
+  return _S.buf;
 }
 
 char *printVal(uint8_t type, int16_t val) {
@@ -538,7 +542,6 @@ void timeStore() {
   RTC.adjust(set); 
 }
 
-// buf 4
 void dispErr() {
   lcd_defaults();
   Tft.setColor(RED);
@@ -573,7 +576,7 @@ void printStat() {
      while(mHist.movePrev());
      line_printn("DUR"); line_printn(itoas(i)); line_printn(": "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    }
-   line_printn("CNT="); line_printn(itoa(msgcnt, buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
+   line_printn("CNT="); line_printn(itoa(msgcnt, _S.buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
    //line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
    //if(TH_SID_SZ>1) { line_printn(", "); line_print(itoas(mHist.getHeadDelay(2)));} else line_print("");      
    line_printn("CHK="); line_print(itoas(mHist.check()));  
@@ -605,7 +608,7 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
     line_setcharpos(13);
     line_printn(printVcc(h->getVal(TH_HIST_VAL_V))); 
     line_setcharpos(18);
-    line_print(itoa(h->mins, buf, 10));
+    line_print(itoa(h->mins, _S.buf, 10));
     i++;    
     } while(mHist.movePrev() && line_getpos()<230);
   return i;  
@@ -614,27 +617,25 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 
 void chartHist() {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
+  //int16_t xr;     
+  int16_t x0, y0;
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
   uint8_t i;
-  int16_t xr, x0;     
-  int16_t y0;
 
   prepChart(0xFF, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
   if(maxt==mint) return;
   
-  xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
-  if(xr>=CHART_WIDTH) xr=CHART_WIDTH-1; 
-  drawVertDashLine(xr, BLUE);
-  if(xr>12) { // draw midnight lines  
+  _S.CV.xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
+  if(_S.CV.xr>=CHART_WIDTH) _S.CV.xr=CHART_WIDTH-1; 
+  drawVertDashLine(_S.CV.xr, BLUE);
+  if(_S.CV.xr>12) { // draw midnight lines  
     {
     DateTime now = RTC.now();
     i=now.dayOfWeek();
     y0 = now.hour()*60+now.minute(); // midday
     }
-    //line_print(""); // test
     while(1) {  
-      x0=xr-y0/chart_xstep_denom;
-      //line_setpos(0, i*20); line_printn(itoa(y0, buf, 10)); line_printn(", "); line_printn(itoa(x0, buf, 10)); ; line_printn(", "); line_print(itoas(i)); // test
+      x0=_S.CV.xr-y0/chart_xstep_denom;
       if(x0<0) break;
       drawVertDashLine(x0, YELLOW);
       lcd_defaults();  
@@ -651,12 +652,12 @@ void chartHist() {
     x0=y0=0;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
-      // we can unionize {y1, x1} with buf
-      int16_t y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
-      int16_t x1=xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
+      //int16_t x1, y1;
+      _S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
+      _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
       //if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
-      if(x0>0) Tft.drawLineThickLowRAM(x1,CHART_TOP+y1,x0,CHART_TOP+y0);  
-      x0=x1; y0=y1;
+      if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,CHART_TOP+_S.CV.y1,x0,CHART_TOP+y0);  
+      x0=_S.CV.x1; y0=_S.CV.y1;
     } while(mHist.movePrev() && x0>0);
   } //for sid
   
@@ -674,12 +675,12 @@ void chartHist60()
   uint8_t cnt=0;  
   uint8_t islot=0;
   uint8_t is;
-  int16_t acc=0;
-  int16_t y_z;
+  int16_t acc=0; // unionize with buf
+  //int16_t y_z;
   
   prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
   if(maxt==mint) return;
-  y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
+  //y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top  // may remove the var and use calculation inside the loop!
   Tft.setBgColor(cc[sid-1]);
   mHist.iterBegin(sid);
   do {
@@ -689,10 +690,11 @@ void chartHist60()
     if(is!=islot) {  
       // draw prev;
       if(cnt) {
-        acc/=cnt;
+        //int16_t y0=y_z;        
         // unionize with buf
-        int16_t y0=y_z;        
+        int16_t y0=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
         int16_t h;
+        acc/=cnt;        
         if(acc<0) {
           if(maxt<0) { y0=0; h=maxt-acc; } else { h=-acc; } 
         }
@@ -837,13 +839,13 @@ uint8_t addHistAcc(struct wt_msg *pmsg) {
 }
 
 char *itoas(uint8_t i) {
-  return itoa(i, buf, 10);
+  return itoa(i, _S.buf, 10);
 }
 
 char *itoas2(uint8_t i) {
-  if(i<10) { *buf='0'; itoa(i, buf+1, 10); }
-  else itoa(i, buf, 10);
-  return buf;
+  if(i<10) { *_S.buf='0'; itoa(i, _S.buf+1, 10); }
+  else itoa(i, _S.buf, 10);
+  return _S.buf;
 }
 
 /****************** RADIO ****************/
