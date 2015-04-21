@@ -618,13 +618,14 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 void chartHist() {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   //int16_t xr;     
-  int16_t x0, y0;
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
   uint8_t i;
 
   prepChart(0xFF, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
   if(maxt==mint) return;
   
+  { // ++scope 1
+  int16_t x0, y0;  
   _S.CV.xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
   if(_S.CV.xr>=CHART_WIDTH) _S.CV.xr=CHART_WIDTH-1; 
   drawVertDashLine(_S.CV.xr, BLUE);
@@ -653,15 +654,17 @@ void chartHist() {
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
       //int16_t x1, y1;
-      _S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
+      //_S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
+      _S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint)+CHART_TOP;
       _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
       //if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
-      if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,CHART_TOP+_S.CV.y1,x0,CHART_TOP+y0);  
+      //if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,CHART_TOP+_S.CV.y1,x0,CHART_TOP+y0);  
+      if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,_S.CV.y1,x0,y0);  
       x0=_S.CV.x1; y0=_S.CV.y1;
     } while(mHist.movePrev() && x0>0);
   } //for sid
   
-
+  } // --scope 1
 }
 
 void chartHist60() 
@@ -737,31 +740,31 @@ int8_t startIter(uint8_t sid) {
 }
 
 
-void prepChart(uint8_t  sid, uint8_t type, uint16_t mbefore) {
+void prepChart(uint8_t  s, uint8_t type, uint16_t m) {
   maxt=mint=0;
-  if(!startIter(sid)) return;
+  if(!startIter(s)) return;
   
   line_init(); 
-  uint8_t sid0, sid1;
   maxt=-9999; mint=9999; // VERY BAD!!!!
-  if(sid!=0xFF) { sid0=sid1=sid; }
+  
+  { // ++scope 1
+  uint8_t sid0, sid1;
+  if(s!=0xFF) { sid0=sid1=s; line_printn(itoas(s)); line_printn(": "); }
   else {sid0=1; sid1=TH_SID_SZ; }
   
   do {
     mHist.iterBegin(sid0);
     if(mHist.movePrev()) {  
-    //maxt=mint=mHist.getPrev()->getVal(type); 
       do {
         int16_t t = mHist.getPrev()->getVal(type);
         if(t>maxt) maxt=t;
         if(t<mint) mint=t;
-      } while(mHist.movePrev() && mHist.getPrevMinsBefore()<mbefore);
+      } while(mHist.movePrev() && mHist.getPrevMinsBefore()<m);
     }
-    //line_printn("> "); line_printn(itoas(sid0)); line_printn(": ");
-    //line_printn(printVal(type, mint)); line_printn("..."); line_print(printVal(type, maxt));
   } while(++sid0<=sid1);
-
-  if(sid!=0xFF) { line_printn(itoas(sid)); line_printn(": "); }
+  } // --scope 1
+  
+  //if(sid!=0xFF) { line_printn(itoas(sid)); line_printn(": "); }
   line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
   
   if(mint%50) {
@@ -776,17 +779,24 @@ void prepChart(uint8_t  sid, uint8_t type, uint16_t mbefore) {
   
   Tft.setColor(WHITE); 
   Tft.drawRectangle(0, CHART_TOP, CHART_WIDTH, CHART_HEIGHT);
-  int16_t y0;  
-  y0=(maxt-mint)>100 ? 50 : 10;  
-  for(int16_t ig=mint; ig<=maxt; ig+=y0) { // degree lines
-     int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
+  { // ++scope 2
+  //int16_t y0;  
+  //y0=(maxt-mint)>100 ? 50 : 10;  
+  s=(maxt-mint)>100 ? 50 : 10;  
+  //for(int16_t ig=mint; ig<=maxt; ig+=y0) { // degree lines
+  for(int16_t ig=mint; ig<=maxt; ig+=s) { // degree lines
+     //int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
+     m=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
      if(ig>mint && ig<maxt) {
        Tft.setColor(ig==0? BLUE : GREEN);
-       Tft.drawHorizontalLine(0, yl, CHART_WIDTH);
+       //Tft.drawHorizontalLine(0, yl, CHART_WIDTH);
+       Tft.drawHorizontalLine(0, m, CHART_WIDTH);
      }
      lcd_defaults();
-     line_setpos(CHART_WIDTH+1, yl-FONT_Y); line_printn(printVal(type,ig));
+     //line_setpos(CHART_WIDTH+1, yl-FONT_Y); line_printn(printVal(type,ig));
+     line_setpos(CHART_WIDTH+1, m-FONT_Y); line_printn(printVal(type,ig));
   }
+  } // --scope 2
 }
 
 
