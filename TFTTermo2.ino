@@ -617,7 +617,6 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
 
 void chartHist() {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
-  //int16_t xr;     
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
   uint8_t i;
 
@@ -653,12 +652,8 @@ void chartHist() {
     x0=y0=0;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
-      //int16_t x1, y1;
-      //_S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint);
       _S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint)+CHART_TOP;
       _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-      //if(x0>0) Tft.drawLineThick(x1,CHART_TOP+y1,x0,CHART_TOP+y0);
-      //if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,CHART_TOP+_S.CV.y1,x0,CHART_TOP+y0);  
       if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,_S.CV.y1,x0,y0);  
       x0=_S.CV.x1; y0=_S.CV.y1;
     } while(mHist.movePrev() && x0>0);
@@ -674,18 +669,23 @@ void chartHist60()
   const int16_t xstep = CHART_WIDTH/DUR_24;
 
   { // histogramm scope
-  uint8_t sid=pageidx+1;
+  //uint8_t sid=pageidx+1;
+
+  
+  //prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
+  prepChart(pageidx+1, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
+  if(maxt==mint) return;
+  //Tft.setBgColor(cc[sid-1]);
+  Tft.setBgColor(cc[pageidx]);
+  //mHist.iterBegin(sid);
+  
+  { // inner scope
   uint8_t cnt=0;  
   uint8_t islot=0;
   uint8_t is;
   int16_t acc=0; // unionize with buf
-  //int16_t y_z;
   
-  prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
-  if(maxt==mint) return;
-  //y_z=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top  // may remove the var and use calculation inside the loop!
-  Tft.setBgColor(cc[sid-1]);
-  mHist.iterBegin(sid);
+  mHist.iterBegin(pageidx+1);
   do {
     if(mHist.movePrev()) is=mHist.getPrevMinsBefore()/DUR_MIN;
     else break;
@@ -693,7 +693,6 @@ void chartHist60()
     if(is!=islot) {  
       // draw prev;
       if(cnt) {
-        //int16_t y0=y_z;        
         // unionize with buf
         int16_t y0=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
         int16_t h;
@@ -716,13 +715,14 @@ void chartHist60()
     }    
     acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
     cnt++;          
-  } while(mHist.isNotOver() && islot<DUR_24); // is<24  
-  }  
+  } while(mHist.isNotOver() && islot<DUR_24);   
+  } // inner scope
+  } // hist scope  
   { // time labels scope
   lcd_defaults();
   DateTime now = RTC.now();  
   printTime(now, true, CHART_WIDTH, 224, 2);   
-  uint16_t mid = now.hour()+1;
+  uint16_t mid = now.hour()+1; // unionize with buf
   drawVertDashLine(CHART_WIDTH-xstep*mid, YELLOW); // draw midnight line
   mid=mid>12 ? mid-12 : mid+12;
   drawVertDashLine(CHART_WIDTH-xstep*mid, RED); // draw noon line
