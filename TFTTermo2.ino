@@ -135,6 +135,7 @@ int16_t mint, maxt; // this is for charting
 union {
   char buf[6];
   struct { int16_t xr, x1, y1; } CV;
+  struct { int16_t acc, h, y0; } HV;
 } _S;
 
 uint8_t err=0; 
@@ -683,7 +684,8 @@ void chartHist60()
   uint8_t cnt=0;  
   uint8_t islot=0;
   uint8_t is;
-  int16_t acc=0; // unionize with buf
+  //int16_t 
+  _S.HV.acc=0; // unionize with buf
   
   mHist.iterBegin(pageidx+1);
   do {
@@ -694,26 +696,27 @@ void chartHist60()
       // draw prev;
       if(cnt) {
         // unionize with buf
-        int16_t y0=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
-        int16_t h;
-        acc/=cnt;        
-        if(acc<0) {
-          if(maxt<0) { y0=0; h=maxt-acc; } else { h=-acc; } 
+        //int16_t 
+        _S.HV.y0=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
+        //int16_t h;
+        _S.HV.acc/=cnt;        
+        if(_S.HV.acc<0) {
+          if(maxt<0) { _S.HV.y0=0; _S.HV.h=maxt-_S.HV.acc; } else { _S.HV.h=-_S.HV.acc; } 
         }
         else {
-          if(mint>0) { y0=CHART_HEIGHT; h=acc-mint;} else {h=acc; }
+          if(mint>0) { _S.HV.y0=CHART_HEIGHT; _S.HV.h=_S.HV.acc-mint;} else {_S.HV.h=_S.HV.acc; }
         }
-        h=(int32_t)h*CHART_HEIGHT/(maxt-mint);
-        if(acc>0) y0-=h;     
-        acc=CHART_WIDTH-xstep*is+1;
-        if(acc>=0)
-          Tft.fillRectangle(acc, CHART_TOP+y0, xstep*(is-islot)-2, h);
+        _S.HV.h=(int32_t)_S.HV.h*CHART_HEIGHT/(maxt-mint);
+        if(_S.HV.acc>0) _S.HV.y0-=_S.HV.h;     
+        _S.HV.acc=CHART_WIDTH-xstep*is+1;
+        if(_S.HV.acc>=0)
+          Tft.fillRectangle(_S.HV.acc, CHART_TOP+_S.HV.y0, xstep*(is-islot)-2, _S.HV.h);
       }      
       islot=is;
-      acc=0;
+      _S.HV.acc=0;
       cnt=0;     
     }    
-    acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
+    _S.HV.acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
     cnt++;          
   } while(mHist.isNotOver() && islot<DUR_24);   
   } // inner scope
