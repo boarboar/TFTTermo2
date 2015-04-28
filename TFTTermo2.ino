@@ -103,6 +103,8 @@
 #define SETCHRT(T)   SETHBLO(flags, (T))
 #define GETCHRT()   GETHBLO(flags)
 
+#define printVal(T, V) ((T)==TH_HIST_VAL_T ? printTemp(V) : printTemp(V))
+
 const char *addr="wserv";
 
 const char *lnames[] = {"", "Stat", "Hist", "Temp", "Day", "Vcc", "Set"};
@@ -136,6 +138,7 @@ union {
   char buf[6];
   struct { int16_t xr, x1, y1; } CV;
   struct { int16_t acc, h, y0; } HV;
+  struct { int16_t ig; } CPV;
 } _S;
 
 uint8_t err=0; 
@@ -472,12 +475,14 @@ char *printVcc(int16_t vcc) {
   return _S.buf;
 }
 
+/*
 char *printVal(uint8_t type, int16_t val) {
   if(type==TH_HIST_VAL_T) return printTemp(val);
   return printVcc(val);
 }
+*/
 
-void dispTimeoutTempM(uint8_t sid, bool reset/*, int x, int y*/) {
+void dispTimeoutTempM(uint8_t sid, bool reset) {
   line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1)+FONT_Y*WS_CHAR_TEMP_SZ/2);
   uint8_t tm=mHist.getHeadDelay(sid);
   if(tm != p_to[sid-1] || reset) {
@@ -767,7 +772,6 @@ void prepChart(uint8_t  s, uint8_t type, uint16_t m) {
   } while(++sid0<=sid1);
   } // --scope 1
   
-  //if(sid!=0xFF) { line_printn(itoas(sid)); line_printn(": "); }
   line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
   
   if(mint%50) {
@@ -783,22 +787,17 @@ void prepChart(uint8_t  s, uint8_t type, uint16_t m) {
   Tft.setColor(WHITE); 
   Tft.drawRectangle(0, CHART_TOP, CHART_WIDTH, CHART_HEIGHT);
   { // ++scope 2
-  //int16_t y0;  
-  //y0=(maxt-mint)>100 ? 50 : 10;  
   s=(maxt-mint)>100 ? 50 : 10;  
-  //for(int16_t ig=mint; ig<=maxt; ig+=y0) { // degree lines
   for(int16_t ig=mint; ig<=maxt; ig+=s) { // degree lines
-     //int16_t yl=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
      m=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
      if(ig>mint && ig<maxt) {
        Tft.setColor(ig==0? BLUE : GREEN);
-       //Tft.drawHorizontalLine(0, yl, CHART_WIDTH);
        Tft.drawHorizontalLine(0, m, CHART_WIDTH);
      }
      lcd_defaults();
-     //line_setpos(CHART_WIDTH+1, yl-FONT_Y); line_printn(printVal(type,ig));
      line_setpos(CHART_WIDTH+1, m-FONT_Y); line_printn(printVal(type,ig));
   }
+ 
   } // --scope 2
 }
 
