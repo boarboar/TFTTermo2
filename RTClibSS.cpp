@@ -10,7 +10,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // utility code, some of this could be exposed in the DateTime API if needed
 
-const uint8_t daysInMonth [] = { 31,28,31,30,31,30,31,31,30,31,30,31 }; //has to be const or compiler compaints
+const static uint8_t daysInMonth [] = { 31,28,31,30,31,30,31,31,30,31,30,31 }; //has to be const or compiler compaints
 const static char* weekDays[7]={"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
 
 // number of days since 2000/01/01, valid for 2001..2099

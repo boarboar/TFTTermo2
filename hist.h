@@ -27,15 +27,7 @@ public:
     uint8_t sid : 4;  // src 0..15
     int8_t temp;    
     uint8_t vcc;    
-  };
-  /*
-  struct wt_msg_acc {
-    uint8_t cnt;
-    uint8_t mins; // mins since previous put
-    int16_t temp;
-    uint16_t vcc;
-  };
-*/
+    };
     TempHistory();
     void init();
     boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);
@@ -48,6 +40,7 @@ public:
     inline boolean isNotOver() {return iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr);} 
     uint16_t     getPrevMinsBefore() { return iter_mbefore; }
     uint8_t  getHeadDelay(uint8_t sid);
+    inline uint8_t  getLatestSid() {return hist[0].sid; }
     uint8_t check(); // check if corrupted 
     static uint8_t interval_m(uint8_t prev);
 protected:

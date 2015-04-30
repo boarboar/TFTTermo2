@@ -166,7 +166,6 @@ void TFT::drawChar( INT8U ascii, INT16U poX, INT16U poY)
     if(_flags&LCD_OPAQ) { setFillColor(LCD_BG); fillScreen(poX, poX+FONT_SPACE*_size_mask_thick, poY, poY+FONT_Y*_size_mask_thick); }	
     setFillColor(LCD_FG);
     if((ascii<32)||(ascii>129)) ascii = '?';
-    //INT16U x=poX;
     for (INT8U i=0; i<FONT_SZ; i++, poX+=_size_mask_thick ) {
         INT8U temp = simpleFont[ascii-0x20][i];
         INT16U y=poY;
@@ -174,47 +173,53 @@ void TFT::drawChar( INT8U ascii, INT16U poX, INT16U poY)
         {
             if((temp>>f)&0x01) // if bit is set in the font mask
             {
-              fillScreen(poX, poX+_size_mask_thick, y, y+_size_mask_thick);
+              fillScreen(poX, poX+_size_mask_thick, y, y+_size_mask_thick); //note - actually double size
             }
         }
     }
     setFillColor(LCD_BG);
 }
 
-
-/*
-void TFT::drawChar( INT8U ascii, INT16U poX, INT16U poY)
+void TFT::drawCharLowRAM( INT8U ascii, INT16U poX, INT16U poY)
 {   
-//    if(_flags&LCD_OPAQ) { setFillColor(LCD_BG); fillScreen(poX, poX+FONT_SPACE*_size_mask_thick, poY, poY+FONT_Y*_size_mask_thick); }	
-//    setFillColor(LCD_FG);
+    if(_flags&LCD_OPAQ) { setFillColor(LCD_BG); fillScreen(poX, poX+FONT_SPACE*_size_mask_thick, poY, poY+FONT_Y*_size_mask_thick); }	
+    //setFillColor(LCD_FG);
     if((ascii<32)||(ascii>129)) ascii = '?';
-    INT16U x=poX;
-    for (INT8U i=0; i<FONT_SZ; i++, x+=_size_mask_thick ) {
-        INT8U temp = simpleFont[ascii-0x20][i];
-        INT16U y=poY;
-        for(INT8U f=0;f<8;f++, y+=_size_mask_thick)
+    INT16U y;
+    INT8U i, temp;
+    INT8U nb;
+    
+    for (i=0; i<FONT_SZ; i++, poX+=_size_mask_thick ) {
+        temp = simpleFont[ascii-0x20][i];
+        y=poY;
+        if(poX>=0) for(INT8U f=0;f<8;f++, y+=_size_mask_thick)
         {
-            if((temp>>f)&0x01) // if bit is set in the font mask
+            if(y>=0 && (temp>>f)&0x01) // if bit is set in the font mask
             {
-              setFillColor(LCD_FG);
-              //fillScreen(x, x+_size_mask_thick, y, y+_size_mask_thick);
+              //fillScreen(poX, poX+_size_mask_thick, y, y+_size_mask_thick); //note - actually double size
+              sendCMD(0x2A); sendData(poX); sendData(poX+_size_mask_thick);
+              sendCMD(0x2B); sendData(y); sendData(y+_size_mask_thick);
+              sendCMD(0x2c);
+              TFT_DC_HIGH;
+              TFT_CS_LOW;
+              nb=(_size_mask_thick+1)*(_size_mask_thick+1);
+              while(nb--) {
+                SPI.transfer(_fgColorH);
+                SPI.transfer(_fgColorL);
+              }     
             }
-            else {
-              if(!(_flags&LCD_OPAQ)) continue; // if transparent - do not paint
-              setFillColor(LCD_BG);
-            }
-            fillScreen(x, x+_size_mask_thick, y, y+_size_mask_thick);
         }
     }
-    setFillColor(LCD_BG);
+    //setFillColor(LCD_BG);
 }
-*/
+
 
 INT16U TFT::drawString(const char *string, INT16U poX, INT16U poY)
 {
     while(*string)
     {
-        drawChar(*string, poX, poY);
+        //drawChar(*string, poX, poY);
+        drawCharLowRAM(*string, poX, poY);
         string++;
         if(poX < getMaxX()) poX += FONT_SPACE*_size_mask_thick;   /* Move cursor right */
         else break;

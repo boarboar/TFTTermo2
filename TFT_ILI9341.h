@@ -67,15 +67,6 @@
 //DC pin P2.1
 //BL pin P2.2
 
-/*
-#define TFT_CS_LOW  {P2OUT &=~ 0x01;}
-#define TFT_CS_HIGH {P2OUT |=  0x01;}
-#define TFT_DC_LOW  {P2OUT &=~ 0x02;}
-#define TFT_DC_HIGH {P2OUT |=  0x02;}
-#define TFT_BL_OFF  {P2OUT &=~ 0x04;}
-#define TFT_BL_ON   {P2OUT |=  0x04;}
-*/
-
 
 #define LCD_FLIP_X	0x01
 #define LCD_FLIP_Y	0x02
@@ -109,12 +100,22 @@ extern INT8U simpleFont[][FONT_SZ];
 
 class TFT
 {
+public: enum Palette {
+    P_BLACK  = 0,
+    P_RED    = 1,
+    P_GREEN  = 2,
+    P_BLUE    = 3,
+    P_YELLOW  = 4,
+    P_WHITE   = 5,
+    P_CYAN    = 6,
+    };  
 public:
         void TFTinit (INT8U cs=P2_0, INT8U dc=P2_1);
 	void setOrientation(int value);
         void fillScreen(void);
 	void fillScreen(INT16 XL,INT16 XR,INT16 YU,INT16 YD);
 	void drawChar(INT8U ascii,INT16U poX, INT16U poY);
+        void drawCharLowRAM(INT8U ascii,INT16U poX, INT16U poY);
         INT16U drawString(const char *string,INT16U poX, INT16U poY);
 	inline void fillRectangle(INT16 poX, INT16 poY, INT16 length, INT16U width) { setFillColor(LCD_BG); fillScreen(poX, poX+length, poY, poY+width); }	
         void drawLineThick(INT16 x0,INT16 y0,INT16 x1,INT16 y1);
@@ -155,12 +156,9 @@ protected:
        //Ctx 
         INT8U _flags;	
         INT8U _size_mask_thick;
-	//INT16U _fgColor, _bgColor;
         INT8U _fgColorL, _fgColorH, _bgColorL, _bgColorH;
         
 };
-
-//extern TFT Tft;
 
 #endif
 

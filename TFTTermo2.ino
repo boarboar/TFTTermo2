@@ -142,12 +142,12 @@ union {
 } _S;
 
 uint8_t err=0; 
-volatile uint8_t flags=0; // chart type encoded in LO half
+volatile uint8_t flags=0; // flgs in HI half, chart type encoded in LO half
 
 uint8_t alarms=0;
 
 // ************************ HIST
-uint8_t last_sid=0xFF; 
+//uint8_t last_sid=0xFF; 
 
 // ************************ UI
 
@@ -157,8 +157,8 @@ uint8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 uint8_t uilev=WS_UI_MAIN;   // compress ?
 
 // unionize:
-uint8_t pageidx=0; // compress ? combine with editmode?
-uint8_t editmode=0; // 0..4 compress ?
+uint8_t pageidx=0; // compress ? 
+uint8_t editmode=0; // local to WS_UI_SET - TODO - replace by pageidx!!!
 
 TFT Tft;
 NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
@@ -189,24 +189,25 @@ void setup()
   line_printn("built: "); line_print(__DATE__);
   */
   
-  editmode=0; hiLightDigit(YELLOW); delay(100); // test
+  //editmode=0; hiLightDigit(YELLOW); delay(100); // test
   
-  dispStat("INIT CLK");   
+  dispStat("INIT CLK"); delay(200);  
   RTC.begin();
   
-  editmode++; hiLightDigit(YELLOW); delay(100); // test
+  //editmode++; hiLightDigit(YELLOW); delay(100); // test
   
-  dispStat("INIT NRF");
+  dispStat("INIT NRF"); delay(200);
   radioSetup();
   pinMode(NRF_IRQ_PIN, INPUT);  
   attachInterrupt(NRF_IRQ_PIN, radioIRQ, FALLING); 
   
-  editmode++; hiLightDigit(YELLOW); delay(100); // test
+  //editmode++; hiLightDigit(YELLOW); delay(100); // test
   
   if(!err) dispStat("INIT OK.");  
   else dispErr();
+  delay(200);
 
-  editmode++; hiLightDigit(YELLOW); delay(100); // test
+  //editmode++; hiLightDigit(YELLOW); delay(100); // test
   editmode=0;
   
   mHist.init(); 
@@ -351,10 +352,12 @@ void updateScreen() {
     Tft.fillScreen();
     Tft.drawString(lnames[uilev], WS_SCREEN_TITLE_X, 0);
   }
-   
+  
+  pageidx=0; 
   switch(uilev) {
     case WS_UI_MAIN: {           
-     if(flags&WS_FLAG_ONDATAUPDATE) dispMain(last_sid);
+     //if(flags&WS_FLAG_ONDATAUPDATE) dispMain(last_sid);
+     if(flags&WS_FLAG_ONDATAUPDATE) dispMain(mHist.getLatestSid());
      else {
        for(uint8_t i=1; i<=TH_SID_SZ; i++) dispMain(i);
        updateScreenTime(true);   
@@ -365,17 +368,17 @@ void updateScreen() {
       pageidx=printHist(0xFF, 0);
       break;    
     case WS_UI_CHART: {
-      pageidx=0;
+      //pageidx=0;
       SETCHRT(TH_HIST_VAL_T);
       chartHist();
       }
       break; 
     case WS_UI_CHART60: 
-      pageidx=0;
+      //pageidx=0;
       chartHist60();
       break;
     case WS_UI_CHART_VCC: {
-      pageidx=0;
+      //pageidx=0;
       SETCHRT(TH_HIST_VAL_V);
       chartHist();
       }
@@ -407,7 +410,8 @@ void dispMain(uint8_t sid) {
     Tft.setColor(YELLOW);
     if(!l || !p) t=0;
     else t=l->getVal(TH_HIST_VAL_T)-p->getVal(TH_HIST_VAL_T);
-    Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
+    //Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
+    Tft.drawCharLowRAM(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
     lcd_defaults();
   }
   if(!(flags&WS_FLAG_ONDATAUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
@@ -538,7 +542,8 @@ void timeUp(uint8_t dig, int sz) {
   else { val=(val/10)*10+((val%10)+1)%10; if(val>maxv[ig]) val=(val/10)*10;  pos++; disp=val%10;} 
   Tft.setSize(sz);
   Tft.setColor(GREEN);
-  Tft.drawChar('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
+  //Tft.drawChar('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
+  Tft.drawCharLowRAM('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
   p_time[ig]=val; 
 }
 
@@ -558,8 +563,10 @@ void dispErr() {
 void dispStat(const char *pbuf) {
   lcd_defaults();
   line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn(pbuf); 
-  if(last_sid!=0xFF) // this is tempoarily
-    line_printn(itoas(last_sid));
+  //if(last_sid!=0xFF) // this is tempoarily
+  //    line_printn(itoas(last_sid);
+  if(mHist.getLatestSid()!=0xFF)
+    line_printn(itoas(mHist.getLatestSid()));
 }
 
 void hiLightDigit(uint16_t color) {
@@ -675,21 +682,14 @@ void chartHist60()
   const int16_t xstep = CHART_WIDTH/DUR_24;
 
   { // histogramm scope
-  //uint8_t sid=pageidx+1;
-
-  
-  //prepChart(sid, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
   prepChart(pageidx+1, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
   if(maxt==mint) return;
-  //Tft.setBgColor(cc[sid-1]);
   Tft.setBgColor(cc[pageidx]);
-  //mHist.iterBegin(sid);
   
   { // inner scope
   uint8_t cnt=0;  
   uint8_t islot=0;
   uint8_t is;
-  //int16_t 
   _S.HV.acc=0; // unionize with buf
   
   mHist.iterBegin(pageidx+1);
@@ -700,10 +700,7 @@ void chartHist60()
     if(is!=islot) {  
       // draw prev;
       if(cnt) {
-        // unionize with buf
-        //int16_t 
         _S.HV.y0=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
-        //int16_t h;
         _S.HV.acc/=cnt;        
         if(_S.HV.acc<0) {
           if(maxt<0) { _S.HV.y0=0; _S.HV.h=maxt-_S.HV.acc; } else { _S.HV.h=-_S.HV.acc; } 
@@ -844,9 +841,10 @@ void line_printn(const char* pbuf) {
 
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   if(DS18_MEAS_FAIL==pmsg->temp) return 1;
-  last_sid=pmsg->sid;
+  //last_sid=pmsg->sid;
   msgcnt++;
-  mHist.addAcc(pmsg->temp, pmsg->vcc, last_sid);
+  //mHist.addAcc(pmsg->temp, pmsg->vcc, last_sid);
+  mHist.addAcc(pmsg->temp, pmsg->vcc, pmsg->sid);
   return 0;
 }
 
