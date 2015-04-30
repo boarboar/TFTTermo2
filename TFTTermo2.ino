@@ -103,7 +103,7 @@
 #define SETCHRT(T)   SETHBLO(flags, (T))
 #define GETCHRT()   GETHBLO(flags)
 
-#define printVal(T, V) ((T)==TH_HIST_VAL_T ? printTemp(V) : printTemp(V))
+#define printVal(T, V) ((T)==TH_HIST_VAL_T ? printTemp(V) : printVcc(V))
 
 const char *addr="wserv";
 
