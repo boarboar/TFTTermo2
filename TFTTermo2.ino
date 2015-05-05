@@ -139,9 +139,10 @@ union {
   struct { int16_t xr, x1, y1; } CV;
   struct { int16_t acc, h, y0; } HV;
   struct { int16_t ig; } CPV;
+  struct { unsigned long ms; } MLV;
 } _S;
 
-uint8_t err=0; 
+uint8_t err=0; // do we need it as external var???
 volatile uint8_t flags=0; // flgs in HI half, chart type encoded in LO half
 
 uint8_t alarms=0;
@@ -230,15 +231,16 @@ void loop()
    }
   }
 
-  unsigned long ms=millis(); 
-  if(ms-mui>WS_UI_CYCLE || ms<mui) { // UI cycle
-   mui=ms;
+  //unsigned long ms=millis(); 
+  _S.MLV.ms=millis(); 
+  if(_S.MLV.ms-mui>WS_UI_CYCLE || _S.MLV.ms<mui) { // UI cycle
+   mui=_S.MLV.ms;
    if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && editmode) && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
      updateScreen();
    }
    
-   uint8_t btcnt_t;
+   uint8_t btcnt_t; // do something with this var!!!
    btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
    if(btcnt_t>WS_BUT_MAX) {
      if(btcnt_t==WS_BUT_CLICK) processShortClick(); 
@@ -257,7 +259,7 @@ void loop()
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
      if(inact_cnt) inact_cnt--;
-       if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeou, at the moment for SID1 only....           
+       if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout, at the moment for SID1 only....           
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen();       
      }
@@ -285,6 +287,7 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 }
 
 void processShortClick() {
+  /*
   if(uilev!=WS_UI_SET || !editmode) { 
     uilev=(uilev+1)%WS_NUILEV;
     updateScreen();
@@ -296,6 +299,18 @@ void processShortClick() {
       if(++editmode>4) editmode=1;
       hiLightDigit(WHITE);
     }
+  }
+  */
+  if(uilev==WS_UI_SET && editmode) { // in edit mode - move to next digit
+    dispStat("EDIT MOV");
+    hiLightDigit(BLACK);
+    if(++editmode>4) editmode=1;
+    hiLightDigit(WHITE);
+  }
+  else { // move to next screen
+    uilev=(uilev+1)%WS_NUILEV;
+    pageidx=0; 
+    updateScreen();
   }
 }
 
@@ -312,15 +327,15 @@ void processLongClick() {
       editmode=0;
       dispStat("TIME STR");
     }
-  } else {
+  } /*else {
     dispStat("LONG CLK");
-  }
+  }*/
 }
 
 void processShortRightClick() {
   lcd_defaults();
   line_init();
-
+/*
   if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
     if(++pageidx>=WS_CHART_NLEV) pageidx=0;
     Tft.fillScreen();    
@@ -342,6 +357,31 @@ void processShortRightClick() {
   if(!editmode) return;
   timeUp(editmode-1, WS_CHAR_TIME_SET_SZ);
   hiLightDigit(WHITE);
+  */
+ switch(uilev) {
+    case WS_UI_CHART: 
+    case WS_UI_CHART_VCC: 
+      if(++pageidx>=WS_CHART_NLEV) pageidx=0;
+      Tft.fillScreen();    
+      chartHist();
+      break;
+    case WS_UI_HIST:
+      Tft.fillScreen();
+      pageidx=printHist(0xFF, pageidx);
+      break;
+    case WS_UI_CHART60:  
+      if(++pageidx>=TH_SID_SZ) pageidx=0;
+      Tft.fillScreen();    
+      chartHist60();
+      break;
+    case WS_UI_SET:
+      if(editmode) {
+        timeUp(editmode-1, WS_CHAR_TIME_SET_SZ);
+        hiLightDigit(WHITE);
+      }   
+     break;
+   default:break;  
+ }
 }       
 
 void updateScreen() {
@@ -353,10 +393,9 @@ void updateScreen() {
     Tft.drawString(lnames[uilev], WS_SCREEN_TITLE_X, 0);
   }
   
-  pageidx=0; 
+  //pageidx=0; 
   switch(uilev) {
     case WS_UI_MAIN: {           
-     //if(flags&WS_FLAG_ONDATAUPDATE) dispMain(last_sid);
      if(flags&WS_FLAG_ONDATAUPDATE) dispMain(mHist.getLatestSid());
      else {
        for(uint8_t i=1; i<=TH_SID_SZ; i++) dispMain(i);
@@ -368,17 +407,14 @@ void updateScreen() {
       pageidx=printHist(0xFF, 0);
       break;    
     case WS_UI_CHART: {
-      //pageidx=0;
       SETCHRT(TH_HIST_VAL_T);
       chartHist();
       }
       break; 
     case WS_UI_CHART60: 
-      //pageidx=0;
       chartHist60();
       break;
     case WS_UI_CHART_VCC: {
-      //pageidx=0;
       SETCHRT(TH_HIST_VAL_V);
       chartHist();
       }
@@ -426,20 +462,17 @@ void updateScreenTime(bool reset) {
   uint8_t dsz;
   uint16_t dy;
   uint16_t dx;
-  //DateTime now = RTC.now();
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
     dsz=WS_CHAR_TIME_SZ/2;
     dy=0;
     dx=WS_CHAR_TIME_SZ*FONT_SPACE*8;
-    //printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
     for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
   } else if(uilev==WS_UI_SET) {
       if(!editmode) {
         dsz=sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
         dx=0;
         dy=WS_CHAR_TIME_SET_SZ*FONT_Y;
-        //printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
       }
   }
   
@@ -453,7 +486,6 @@ void updateScreenTime(bool reset) {
     }
     printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
   } 
-  
 }
 
 // buf 5
@@ -478,13 +510,6 @@ char *printVcc(int16_t vcc) {
   itoa((uint8_t)(vcc%100), _S.buf+strlen(_S.buf), 10);
   return _S.buf;
 }
-
-/*
-char *printVal(uint8_t type, int16_t val) {
-  if(type==TH_HIST_VAL_T) return printTemp(val);
-  return printVcc(val);
-}
-*/
 
 void dispTimeoutTempM(uint8_t sid, bool reset) {
   line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1)+FONT_Y*WS_CHAR_TEMP_SZ/2);
@@ -563,8 +588,6 @@ void dispErr() {
 void dispStat(const char *pbuf) {
   lcd_defaults();
   line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn(pbuf); 
-  //if(last_sid!=0xFF) // this is tempoarily
-  //    line_printn(itoas(last_sid);
   if(mHist.getLatestSid()!=0xFF)
     line_printn(itoas(mHist.getLatestSid()));
 }
@@ -841,9 +864,7 @@ void line_printn(const char* pbuf) {
 
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   if(DS18_MEAS_FAIL==pmsg->temp) return 1;
-  //last_sid=pmsg->sid;
   msgcnt++;
-  //mHist.addAcc(pmsg->temp, pmsg->vcc, last_sid);
   mHist.addAcc(pmsg->temp, pmsg->vcc, pmsg->sid);
   return 0;
 }
