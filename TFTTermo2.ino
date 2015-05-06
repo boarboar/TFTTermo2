@@ -13,8 +13,8 @@
 // MISO P1_6
 
 #define TFT_CS_PIN P2_0
-#define TFT_DC_PIN P2_5 // this can be reused 
-#define TFT_BL_PIN P1_4 // can use RED for it...  (or use RED for IRQ ?)
+#define TFT_DC_PIN P2_5 
+#define TFT_BL_PIN P1_4 
   
 #define DS1302_SCLK_PIN   P2_4    
 #define DS1302_IO_PIN     P2_5    
@@ -53,6 +53,7 @@
 #define WS_FLAG_RFREAD    0x10
 #define WS_FLAG_ONCEFAIL  0x20
 #define WS_FLAG_ONDATAUPDATE  0x40
+#define WS_FLAG_NEEDUPDATE  0x80
 
 #define WS_NUILEV 7
 #define WS_UI_MAIN  0
@@ -153,13 +154,12 @@ uint8_t alarms=0;
 // ************************ UI
 
 uint8_t inact_cnt, disp_cnt=0;  
-uint8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
-
+//uint8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
+uint8_t btcnt1=0, btcnt2=0;
 uint8_t uilev=WS_UI_MAIN;   // compress ?
 
-// unionize:
 uint8_t pageidx=0; // compress ? 
-uint8_t editmode=0; // local to WS_UI_SET - TODO - replace by pageidx!!!
+//uint8_t editmode=0; // local to WS_UI_SET - TODO - replace by pageidx!!!
 
 TFT Tft;
 NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
@@ -190,26 +190,19 @@ void setup()
   line_printn("built: "); line_print(__DATE__);
   */
   
-  //editmode=0; hiLightDigit(YELLOW); delay(100); // test
-  
   dispStat("INIT CLK"); delay(200);  
   RTC.begin();
-  
-  //editmode++; hiLightDigit(YELLOW); delay(100); // test
   
   dispStat("INIT NRF"); delay(200);
   radioSetup();
   pinMode(NRF_IRQ_PIN, INPUT);  
   attachInterrupt(NRF_IRQ_PIN, radioIRQ, FALLING); 
   
-  //editmode++; hiLightDigit(YELLOW); delay(100); // test
-  
   if(!err) dispStat("INIT OK.");  
   else dispErr();
   delay(200);
 
-  //editmode++; hiLightDigit(YELLOW); delay(100); // test
-  editmode=0;
+ // editmode=0;
   
   mHist.init(); 
   mui=millis();
@@ -235,11 +228,11 @@ void loop()
   _S.MLV.ms=millis(); 
   if(_S.MLV.ms-mui>WS_UI_CYCLE || _S.MLV.ms<mui) { // UI cycle
    mui=_S.MLV.ms;
-   if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && editmode) && !inact_cnt) {  // back to main screen after user inactivity timeout
+   if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && pageidx) && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
      updateScreen();
    }
-   
+   /*
    uint8_t btcnt_t; // do something with this var!!!
    btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
    if(btcnt_t>WS_BUT_MAX) {
@@ -255,6 +248,25 @@ void loop()
      btcnt_t=0;     
    }
    SETHBHI(btcnt, btcnt_t);
+     */
+
+   flags &= ~WS_FLAG_NEEDUPDATE;
+
+   btcnt1=processClick(BUTTON_1, GETHBLO(btcnt1));
+   if(btcnt1>WS_BUT_MAX) {
+     if(btcnt1==WS_BUT_CLICK) processShortClick(); 
+     else processLongClick();
+     btcnt1=0;     
+   }
+   
+   btcnt2=processClick(BUTTON_2, GETHBHI(btcnt2));
+   if(btcnt2>WS_BUT_MAX) {
+     if(btcnt2==WS_BUT_CLICK) processShortRightClick(); 
+     btcnt2=0;     
+   }
+   
+   if(flags&WS_FLAG_NEEDUPDATE)
+     updateScreen();
      
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
      disp_cnt=0;   
@@ -287,44 +299,31 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 }
 
 void processShortClick() {
-  /*
-  if(uilev!=WS_UI_SET || !editmode) { 
-    uilev=(uilev+1)%WS_NUILEV;
-    updateScreen();
-  }
-  else {
-    if(uilev==WS_UI_SET) {
-      dispStat("EDIT MOV");
-      hiLightDigit(BLACK);
-      if(++editmode>4) editmode=1;
-      hiLightDigit(WHITE);
-    }
-  }
-  */
-  if(uilev==WS_UI_SET && editmode) { // in edit mode - move to next digit
+  if(uilev==WS_UI_SET && pageidx) { // in edit mode - move to next digit
     dispStat("EDIT MOV");
     hiLightDigit(BLACK);
-    if(++editmode>4) editmode=1;
+    if(++pageidx>4) pageidx=1;
     hiLightDigit(WHITE);
   }
   else { // move to next screen
     uilev=(uilev+1)%WS_NUILEV;
     pageidx=0; 
-    updateScreen();
+    //updateScreen();
+    flags|=WS_FLAG_NEEDUPDATE;
   }
 }
 
 void processLongClick() {
   if(uilev==WS_UI_SET) {
-    if(!editmode) {
+    if(!pageidx) {
       dispStat("EDIT  ON");
-      editmode=1;
+      pageidx=1;
       hiLightDigit(WHITE);
     } else {
       dispStat("EDIT OFF");
       timeStore();
       hiLightDigit(BLACK);
-      editmode=0;
+      pageidx=0;
       dispStat("TIME STR");
     }
   } /*else {
@@ -335,53 +334,33 @@ void processLongClick() {
 void processShortRightClick() {
   lcd_defaults();
   line_init();
-/*
-  if(uilev==WS_UI_CHART || uilev==WS_UI_CHART_VCC) {
-    if(++pageidx>=WS_CHART_NLEV) pageidx=0;
-    Tft.fillScreen();    
-    chartHist();
-    return;
-  }
-  if(uilev==WS_UI_HIST) {
-    Tft.fillScreen();
-    pageidx=printHist(0xFF, pageidx);
-    return;
-  }
-  if(uilev==WS_UI_CHART60) {
-    if(++pageidx>=TH_SID_SZ) pageidx=0;
-    Tft.fillScreen();    
-    chartHist60();
-    return;
-  }
-  if(uilev!=WS_UI_SET) return;
-  if(!editmode) return;
-  timeUp(editmode-1, WS_CHAR_TIME_SET_SZ);
-  hiLightDigit(WHITE);
-  */
- switch(uilev) {
+  switch(uilev) {
     case WS_UI_CHART: 
     case WS_UI_CHART_VCC: 
       if(++pageidx>=WS_CHART_NLEV) pageidx=0;
-      Tft.fillScreen();    
-      chartHist();
+      //Tft.fillScreen();    
+      //chartHist();
+      flags|=WS_FLAG_NEEDUPDATE;
       break;
     case WS_UI_HIST:
-      Tft.fillScreen();
-      pageidx=printHist(0xFF, pageidx);
+      //Tft.fillScreen();
+      //pageidx=printHist(0xFF, pageidx);
+      flags|=WS_FLAG_NEEDUPDATE;
       break;
     case WS_UI_CHART60:  
       if(++pageidx>=TH_SID_SZ) pageidx=0;
-      Tft.fillScreen();    
-      chartHist60();
+      //Tft.fillScreen();    
+      //chartHist60();
+      flags|=WS_FLAG_NEEDUPDATE;
       break;
     case WS_UI_SET:
-      if(editmode) {
-        timeUp(editmode-1, WS_CHAR_TIME_SET_SZ);
+      if(pageidx) {
+        timeUp(pageidx-1, WS_CHAR_TIME_SET_SZ);
         hiLightDigit(WHITE);
       }   
      break;
    default:break;  
- }
+  }
 }       
 
 void updateScreen() {
@@ -393,7 +372,6 @@ void updateScreen() {
     Tft.drawString(lnames[uilev], WS_SCREEN_TITLE_X, 0);
   }
   
-  //pageidx=0; 
   switch(uilev) {
     case WS_UI_MAIN: {           
      if(flags&WS_FLAG_ONDATAUPDATE) dispMain(mHist.getLatestSid());
@@ -469,7 +447,7 @@ void updateScreenTime(bool reset) {
     dx=WS_CHAR_TIME_SZ*FONT_SPACE*8;
     for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
   } else if(uilev==WS_UI_SET) {
-      if(!editmode) {
+      if(!pageidx) {
         dsz=sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
         dx=0;
         dy=WS_CHAR_TIME_SET_SZ*FONT_Y;
@@ -593,7 +571,7 @@ void dispStat(const char *pbuf) {
 }
 
 void hiLightDigit(uint16_t color) {
-  uint8_t d=(editmode>0 && editmode<3)?editmode-1:editmode;
+  uint8_t d=(pageidx>0 && pageidx<3)?pageidx-1:pageidx;
   Tft.setColor(color);
   Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, WS_SCREEN_TIME_LINE_Y, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);
 }
