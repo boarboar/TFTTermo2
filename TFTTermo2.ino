@@ -252,14 +252,14 @@ void loop()
 
    flags &= ~WS_FLAG_NEEDUPDATE;
 
-   btcnt1=processClick(BUTTON_1, GETHBLO(btcnt1));
+   btcnt1=processClick(BUTTON_1, btcnt1);
    if(btcnt1>WS_BUT_MAX) {
      if(btcnt1==WS_BUT_CLICK) processShortClick(); 
      else processLongClick();
      btcnt1=0;     
    }
    
-   btcnt2=processClick(BUTTON_2, GETHBHI(btcnt2));
+   btcnt2=processClick(BUTTON_2, btcnt2);
    if(btcnt2>WS_BUT_MAX) {
      if(btcnt2==WS_BUT_CLICK) processShortRightClick(); 
      btcnt2=0;     
