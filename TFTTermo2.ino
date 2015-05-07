@@ -134,7 +134,6 @@ uint16_t msgcnt=0;
 // trancient vars
 
 int16_t mint, maxt; // this is for charting
-//char buf[6];
 union {
   char buf[6];
   struct { int16_t xr, x1, y1; } CV;
@@ -143,23 +142,18 @@ union {
   struct { unsigned long ms; } MLV;
 } _S;
 
-uint8_t err=0; // do we need it as external var???
+//uint8_t err=0; // do we need it as external var???
 volatile uint8_t flags=0; // flgs in HI half, chart type encoded in LO half
 
 uint8_t alarms=0;
 
-// ************************ HIST
-//uint8_t last_sid=0xFF; 
-
 // ************************ UI
 
 uint8_t inact_cnt, disp_cnt=0;  
-//uint8_t btcnt=0; // lowhalf-BUT1 cnt. hihalf-BUT2 cnt.
 uint8_t btcnt1=0, btcnt2=0;
 uint8_t uilev=WS_UI_MAIN;   // compress ?
 
 uint8_t pageidx=0; // compress ? 
-//uint8_t editmode=0; // local to WS_UI_SET - TODO - replace by pageidx!!!
 
 TFT Tft;
 NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
@@ -184,6 +178,8 @@ void setup()
   digitalWrite(TFT_BL_PIN, HIGH);
   
   lcd_defaults();
+
+  mHist.init(); 
   
   /*
   line_init();
@@ -194,17 +190,14 @@ void setup()
   RTC.begin();
   
   dispStat("INIT NRF"); delay(200);
-  radioSetup();
+  uint8_t err=radioSetup();
   pinMode(NRF_IRQ_PIN, INPUT);  
   attachInterrupt(NRF_IRQ_PIN, radioIRQ, FALLING); 
   
   if(!err) dispStat("INIT OK.");  
-  else dispErr();
+  else dispErr(err);
   delay(200);
 
- // editmode=0;
-  
-  mHist.init(); 
   mui=millis();
   
   rts = RTC.now().unixtime();
@@ -215,8 +208,8 @@ void loop()
 {
   if(flags&WS_FLAG_RFREAD) {
    flags &= ~WS_FLAG_RFREAD;
-   radioRead();  
-   if(err) dispErr();
+   uint8_t err=radioRead();  
+   if(err) dispErr(err);
    else {
      flags |= WS_FLAG_ONDATAUPDATE;
      updateScreen();
@@ -224,7 +217,6 @@ void loop()
    }
   }
 
-  //unsigned long ms=millis(); 
   _S.MLV.ms=millis(); 
   if(_S.MLV.ms-mui>WS_UI_CYCLE || _S.MLV.ms<mui) { // UI cycle
    mui=_S.MLV.ms;
@@ -556,7 +548,7 @@ void timeStore() {
   RTC.adjust(set); 
 }
 
-void dispErr() {
+void dispErr(uint8_t err) {
   lcd_defaults();
   Tft.setColor(RED);
   line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn("ERR="); line_printn(itoas(err));
@@ -566,7 +558,7 @@ void dispErr() {
 void dispStat(const char *pbuf) {
   lcd_defaults();
   line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn(pbuf); 
-  if(mHist.getLatestSid()!=0xFF)
+  if(mHist.getLatestSid()!=0xF)
     line_printn(itoas(mHist.getLatestSid()));
 }
 
@@ -859,7 +851,8 @@ char *itoas2(uint8_t i) {
 
 /****************** RADIO ****************/
 
-void radioSetup() {
+uint8_t radioSetup() {
+  uint8_t err=0;
   if (!nrf24.init()) err=1;
   else if (!nrf24.setChannel(WS_CHAN)) err=2;
   else if (!nrf24.setThisAddress((uint8_t*)addr, strlen(addr))) err=3;
@@ -869,10 +862,12 @@ void radioSetup() {
     nrf24.spiWriteRegister(NRF24_REG_00_CONFIG, nrf24.spiReadRegister(NRF24_REG_00_CONFIG)|NRF24_MASK_TX_DS|NRF24_MASK_MAX_RT); // only DR interrupt
     err=0;
   }  
+  return err;
 }
 
-void radioRead() {
+uint8_t radioRead() {
   wt_msg msg; // eventually, will move it here
+  uint8_t err=0;
   uint8_t len=sizeof(msg); 
   if(!nrf24.available()) { 
    err=6; alarms |= WS_ALR_WFAIL; 
@@ -889,6 +884,7 @@ void radioRead() {
     else if(0!=addHistAcc(&msg)) {err=9;  alarms |= WS_ALR_BAD_TEMP;} // at the moment 
     else {err=0; alarms = 0;} 
   }
+  return err;
 }
 
 void radioIRQ() {
