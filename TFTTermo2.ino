@@ -374,7 +374,8 @@ void updateScreen() {
      }      
      break;
     case WS_UI_HIST: 
-      pageidx=printHist(0xFF, 0);
+      //pageidx=printHist(0xFF, 0);
+      pageidx=printHist(0xFF, pageidx);
       break;    
     case WS_UI_CHART: {
       SETCHRT(TH_HIST_VAL_T);
