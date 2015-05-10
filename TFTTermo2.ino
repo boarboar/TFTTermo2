@@ -224,23 +224,6 @@ void loop()
      uilev=WS_UI_MAIN;
      updateScreen();
    }
-   /*
-   uint8_t btcnt_t; // do something with this var!!!
-   btcnt_t=processClick(BUTTON_1, GETHBLO(btcnt));
-   if(btcnt_t>WS_BUT_MAX) {
-     if(btcnt_t==WS_BUT_CLICK) processShortClick(); 
-     else processLongClick();
-     btcnt_t=0;     
-   }
-   SETHBLO(btcnt, btcnt_t);
-   
-   btcnt_t=processClick(BUTTON_2, GETHBHI(btcnt));
-   if(btcnt_t>WS_BUT_MAX) {
-     if(btcnt_t==WS_BUT_CLICK) processShortRightClick(); 
-     btcnt_t=0;     
-   }
-   SETHBHI(btcnt, btcnt_t);
-     */
 
    flags &= ~WS_FLAG_NEEDUPDATE;
 
@@ -330,19 +313,13 @@ void processShortRightClick() {
     case WS_UI_CHART: 
     case WS_UI_CHART_VCC: 
       if(++pageidx>=WS_CHART_NLEV) pageidx=0;
-      //Tft.fillScreen();    
-      //chartHist();
       flags|=WS_FLAG_NEEDUPDATE;
       break;
     case WS_UI_HIST:
-      //Tft.fillScreen();
-      //pageidx=printHist(0xFF, pageidx);
       flags|=WS_FLAG_NEEDUPDATE;
       break;
     case WS_UI_CHART60:  
       if(++pageidx>=TH_SID_SZ) pageidx=0;
-      //Tft.fillScreen();    
-      //chartHist60();
       flags|=WS_FLAG_NEEDUPDATE;
       break;
     case WS_UI_SET:
@@ -374,7 +351,6 @@ void updateScreen() {
      }      
      break;
     case WS_UI_HIST: 
-      //pageidx=printHist(0xFF, 0);
       pageidx=printHist(0xFF, pageidx);
       break;    
     case WS_UI_CHART: {
@@ -417,7 +393,6 @@ void dispMain(uint8_t sid) {
     Tft.setColor(YELLOW);
     if(!l || !p) t=0;
     else t=l->getVal(TH_HIST_VAL_T)-p->getVal(TH_HIST_VAL_T);
-    //Tft.drawChar(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
     Tft.drawCharLowRAM(t==0? ' ': t>0 ? WS_CHAR_UP : WS_CHAR_DN, FONT_SPACE*WS_CHAR_TEMP_SZ*6, y);    
     lcd_defaults();
   }
@@ -538,7 +513,6 @@ void timeUp(uint8_t dig, int sz) {
   else { val=(val/10)*10+((val%10)+1)%10; if(val>maxv[ig]) val=(val/10)*10;  pos++; disp=val%10;} 
   Tft.setSize(sz);
   Tft.setColor(GREEN);
-  //Tft.drawChar('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
   Tft.drawCharLowRAM('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
   p_time[ig]=val; 
 }
@@ -584,10 +558,7 @@ void printStat() {
      line_printn("DUR"); line_printn(itoas(i)); line_printn(": "); dispTimeoutStatic((uint32_t)mHist.getPrevMinsBefore()*60); line_print("");      
    }
    line_printn("CNT="); line_printn(itoa(msgcnt, _S.buf, 10)); line_printn(" HSZ="); line_print(itoas(mHist.getSz()));
-   //line_printn("HDL="); line_printn(itoas(mHist.getHeadDelay(1))); 
-   //if(TH_SID_SZ>1) { line_printn(", "); line_print(itoas(mHist.getHeadDelay(2)));} else line_print("");      
    line_printn("CHK="); line_print(itoas(mHist.check()));  
-   //line_printn("SSZ="); line_print(itoas(sizeof(TempHistory::wt_msg_hist)));
    for(i=0; i<=WS_ALR_LAST_IDX; i++) {
      line_printn("A");line_printn(itoas(i));line_printn("=");
      if(alarms&(1<<i)) line_print("Y");

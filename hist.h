@@ -1,7 +1,7 @@
 
 // effective storage is TH_HIST_SZ-1
-//#define TH_HIST_SZ  29
-#define TH_HIST_SZ  32
+//#define TH_HIST_SZ  33
+#define TH_HIST_SZ  33
 #define TH_SID_SZ  2
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2
@@ -23,7 +23,7 @@ public:
   class  __attribute__((__packed__)) wt_msg_hist { // 4 bytes
     public:
     int16_t getVal(uint8_t type) { return type==TH_HIST_VAL_T ? temp*TH_HIST_DV_T : vcc*TH_HIST_DV_V; }
-    uint16_t mins : 12; // mins since previous pu (0..254*16). 0xFFF=empty slot
+    uint16_t mins : 12; // mins since previous put (0..254*16). 0xFFF=empty slot
     uint8_t sid : 4;  // src 0..15
     int8_t temp;    
     uint8_t vcc;    
