@@ -125,7 +125,7 @@ TempHistory mHist;
 // ************************ UI
 
 uint32_t mui;
-uint32_t rts=0; 
+uint32_t rts=0; // this can be rid off later
 uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
 uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
@@ -436,12 +436,19 @@ void updateScreenTime(bool reset) {
 
 // buf 5
 char *printTemp(int16_t disptemp) {
+  /*
   char s='+';
   if(disptemp<0) {
     s='-';
     disptemp=-disptemp;
   } else if(disptemp==0) s=' ';
   _S.buf[0]=s; 
+  */
+  _S.buf[0]='+';
+  if(disptemp<0) {
+    _S.buf[0]='-';
+    disptemp=-disptemp;
+  } else if(disptemp==0) _S.buf[0]=' ';
   itoa((uint8_t)(disptemp/10), _S.buf+1, 10);
   strcat(_S.buf, ".");
   itoa((uint8_t)(disptemp%10), _S.buf+strlen(_S.buf), 10);
