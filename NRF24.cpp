@@ -8,7 +8,7 @@
 
 NRF24::NRF24(uint8_t chipEnablePin, uint8_t chipSelectPin)
 {
-    _configuration = NRF24_EN_CRC; // Default: 1 byte CRC enabled
+//    _configuration = NRF24_EN_CRC; // Default: 1 byte CRC enabled
     _chipEnablePin = chipEnablePin;
     _chipSelectPin = chipSelectPin;
 }
@@ -140,11 +140,12 @@ boolean NRF24::setChannel(uint8_t channel)
     spiWriteRegister(NRF24_REG_05_RF_CH, channel & NRF24_RF_CH);
     return true;
 }
+/*
 boolean NRF24::setConfiguration(uint8_t configuration)
 {
     _configuration = configuration;
 }
-
+*/
 boolean NRF24::setPipeAddress(uint8_t pipe, uint8_t* address, uint8_t len)
 {
     spiBurstWriteRegister(NRF24_REG_0A_RX_ADDR_P0 + pipe, address, len);
@@ -201,14 +202,16 @@ boolean NRF24::setRF(uint8_t data_rate, uint8_t power)
 
 boolean NRF24::powerDown()
 {
-    spiWriteRegister(NRF24_REG_00_CONFIG, _configuration);
+//    spiWriteRegister(NRF24_REG_00_CONFIG, _configuration);
+    spiWriteRegister(NRF24_REG_00_CONFIG, NRF24_EN_CRC);
     digitalWrite(_chipEnablePin, LOW);
     return true;
 }
 
 boolean NRF24::powerUpRx()
 {
-    boolean status = spiWriteRegister(NRF24_REG_00_CONFIG, _configuration | NRF24_PWR_UP | NRF24_PRIM_RX);
+    //boolean status = spiWriteRegister(NRF24_REG_00_CONFIG, _configuration | NRF24_PWR_UP | NRF24_PRIM_RX);
+    boolean status = spiWriteRegister(NRF24_REG_00_CONFIG, NRF24_EN_CRC | NRF24_PWR_UP | NRF24_PRIM_RX);
     digitalWrite(_chipEnablePin, HIGH);
     return status;
 }
@@ -217,7 +220,8 @@ boolean NRF24::powerUpTx()
 {
     // Its the pulse high that puts us into TX mode
     digitalWrite(_chipEnablePin, LOW);
-    boolean status = spiWriteRegister(NRF24_REG_00_CONFIG, _configuration | NRF24_PWR_UP);
+    //boolean status = spiWriteRegister(NRF24_REG_00_CONFIG, _configuration | NRF24_PWR_UP);
+    boolean status = spiWriteRegister(NRF24_REG_00_CONFIG, NRF24_EN_CRC | NRF24_PWR_UP);
     digitalWrite(_chipEnablePin, HIGH);
     return status;
 }

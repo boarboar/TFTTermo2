@@ -550,6 +550,7 @@ public:
     /// \return true on success
     boolean setChannel(uint8_t channel);
 
+/*
     /// Sets the chip configuration that will be used to set
     /// the NRF24 NRF24_REG_00_CONFIG register. This allows you to change some
     /// chip configuration for compatibility with libraries other than this one.
@@ -558,6 +559,7 @@ public:
     /// \param[in] configuration The chip configuration to be used.
     /// \return true on success
     boolean setConfiguration(uint8_t configuration);
+*/
 
     /// Sets the first len bytes of the address for the given NRF24 receiver pipe
     /// This is an internal function and is not normally used by appications, but
@@ -675,7 +677,7 @@ public:
 protected:
 
 private:
-    uint8_t             _configuration;
+    //uint8_t             _configuration;
     uint8_t             _chipEnablePin;
     uint8_t             _chipSelectPin;
 };
