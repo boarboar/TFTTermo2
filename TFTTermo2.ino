@@ -630,7 +630,8 @@ void chartHist() {
       if(i) i--; else i=6;
     }
   }   
-    
+   
+   
   Tft.setThick(5);  
   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
     Tft.setColor(cc[i-1]);
@@ -639,12 +640,12 @@ void chartHist() {
     if(mHist.movePrev()) do {
       _S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint)+CHART_TOP;
       _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-      if(x0>0) Tft.drawLineThickLowRAM(_S.CV.x1,_S.CV.y1,x0,y0);  
+      if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
       x0=_S.CV.x1; y0=_S.CV.y1;
     } while(mHist.movePrev() && x0>0);
-  } //for sid
+  } //for sid    
   
-  } // --scope 1
+  } // --scope 1  
 }
 
 void chartHist60() 
@@ -656,6 +657,7 @@ void chartHist60()
   { // histogramm scope
   prepChart(pageidx+1, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
   if(maxt==mint) return;
+  
   Tft.setBgColor(cc[pageidx]);
   
   { // inner scope
@@ -703,7 +705,7 @@ void chartHist60()
   drawVertDashLine(CHART_WIDTH-xstep*mid, YELLOW); // draw midnight line
   mid=mid>12 ? mid-12 : mid+12;
   drawVertDashLine(CHART_WIDTH-xstep*mid, RED); // draw noon line
-  }
+ }
 }
 
 

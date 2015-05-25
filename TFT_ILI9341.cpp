@@ -343,6 +343,58 @@ void TFT::drawLineThickLowRAM(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
     }
 }
 
+void TFT::drawLineThickLowRAM8Bit(INT16 x0,INT16 y0,INT16 x1,INT16 y1)
+{   
+    int16_t err;
+    uint8_t dy;
+    uint8_t dx;
+    uint8_t th2;
+    if(x0>=x1) {dx=x1; x1=x0; x0=dx; dy=y1; y1=y0; y0=dy;}
+    dx=x1-x0;    
+    if(y0<y1) dy=y1-y0; else dy=y0-y1;
+    
+    err = dx-dy; // error value e_xy            
+    
+      
+    for (;;){                                                          
+        if (2*err+dy >= 0) {                   // e_xy+e_x > 0                 
+            if(x0>=0) { // draw vertical line at x0, length of _size_mask_thick : y0-_size_mask_thick/2 -  y0+_size_mask_thick/2
+              th2=_size_mask_thick/2;
+              sendCMD(0x2A); sendData(x0); sendData(x0);
+              sendCMD(0x2B); sendData(y0-th2); sendData(y0+th2);
+              sendCMD(0x2c);
+              TFT_DC_HIGH;
+              TFT_CS_LOW;
+              th2=th2*2+1;
+              while(th2--) {
+                SPI.transfer(_fgColorH);
+                SPI.transfer(_fgColorL);
+              }           
+            }
+            if (x0 == x1) break;
+            err -= dy; x0++;
+        }
+        if (2*err <= dx) {                   // e_xy+e_y < 0                 
+            th2=_size_mask_thick/2;
+            if(x0>=_size_mask_thick/2) { // draw horizontal line at y0, length of _size_mask_thick : x0-_size_mask_thick/2 -  x0+_size_mask_thick/2
+              sendCMD(0x2A); sendData(x0-th2); sendData(x0+th2);
+              sendCMD(0x2B); sendData(y0); sendData(y0);
+              sendCMD(0x2c);
+              TFT_DC_HIGH;
+              TFT_CS_LOW;
+              th2=th2*2+1;
+              while(th2--) {
+                SPI.transfer(_fgColorH);
+                SPI.transfer(_fgColorL);
+              }            
+            }
+            if (y0 == y1) break;
+            err += dx; 
+            if(y0<y1) y0++; else y0--;
+        }
+    }
+}
+
 /*        
 void TFT::drawRectangle(INT16 poX, INT16 poY, INT16U length, INT16U width)
 {
