@@ -215,7 +215,7 @@ void loop()
    else {
      flags |= WS_FLAG_ONDATAUPDATE;
      //updateScreen();
-     flags|=WS_FLAG_NEEDUPDATE;
+     //flags|=WS_FLAG_NEEDUPDATE;
      dispStat("READ ");
    }
   }
@@ -244,7 +244,8 @@ void loop()
      btcnt2=0;     
    }
    
-   if(flags&WS_FLAG_NEEDUPDATE)
+   //if(flags&WS_FLAG_NEEDUPDATE)
+   if(flags&(WS_FLAG_NEEDUPDATE|WS_FLAG_ONDATAUPDATE))
      updateScreen();
      
    if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
