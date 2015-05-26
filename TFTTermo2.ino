@@ -129,7 +129,7 @@ uint32_t rts=0; // this can be rid off later
 uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
 uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
-uint16_t msgcnt=0;
+uint16_t msgcnt=0; // this can be rid off later
 
 // trancient vars
 
@@ -206,13 +206,16 @@ void setup()
 
 void loop()
 {
+  flags &= ~WS_FLAG_NEEDUPDATE;
+
   if(flags&WS_FLAG_RFREAD) {
    flags &= ~WS_FLAG_RFREAD;
    uint8_t err=radioRead();  
    if(err) dispErr(err);
    else {
      flags |= WS_FLAG_ONDATAUPDATE;
-     updateScreen();
+     //updateScreen();
+     flags|=WS_FLAG_NEEDUPDATE;
      dispStat("READ ");
    }
   }
@@ -222,10 +225,11 @@ void loop()
    mui=_S.MLV.ms;
    if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && pageidx) && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
-     updateScreen();
+     //updateScreen();
+     flags|=WS_FLAG_NEEDUPDATE;
    }
 
-   flags &= ~WS_FLAG_NEEDUPDATE;
+  // flags &= ~WS_FLAG_NEEDUPDATE;
 
    btcnt1=processClick(BUTTON_1, btcnt1);
    if(btcnt1>WS_BUT_MAX) {
