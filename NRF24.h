@@ -464,7 +464,7 @@ public:
     /// \param[in] chipEnablePin the Arduino pin to use to enable the chip for4 transmit/receive
     /// \param[in] chipSelectPin the Arduino pin number of the output to use to select the NRF24 before
     /// accessing it
-    NRF24(uint8_t chipEnablePin = 8, uint8_t chipSelectPin = SS);
+    //NRF24(uint8_t chipEnablePin = 8, uint8_t chipSelectPin = SS);
   
     /// Initialises this instance and the radio module connected to it.
     /// The following steps are taken:g
@@ -677,9 +677,8 @@ public:
 protected:
 
 private:
-    //uint8_t             _configuration;
-    uint8_t             _chipEnablePin;
-    uint8_t             _chipSelectPin;
+//    uint8_t             _chipEnablePin;
+//    uint8_t             _chipSelectPin;
 };
 
 /// @example nrf24_audio_rx.pde

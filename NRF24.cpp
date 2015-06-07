@@ -6,12 +6,16 @@
 #include "NRF24.h"
 #include <SPI.h>
 
+#define _chipEnablePin P2_3
+#define _chipSelectPin P2_1
+
+/*
 NRF24::NRF24(uint8_t chipEnablePin, uint8_t chipSelectPin)
 {
-//    _configuration = NRF24_EN_CRC; // Default: 1 byte CRC enabled
     _chipEnablePin = chipEnablePin;
     _chipSelectPin = chipSelectPin;
 }
+*/
 
 boolean NRF24::init()
 {

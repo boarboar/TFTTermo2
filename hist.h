@@ -1,7 +1,7 @@
 
 // effective storage is TH_HIST_SZ-1
 //#define TH_HIST_SZ  33
-#define TH_HIST_SZ  33
+#define TH_HIST_SZ  35
 #define TH_SID_SZ  2
 #define TH_HIST_DV_T  5
 #define TH_HIST_DV_V  2

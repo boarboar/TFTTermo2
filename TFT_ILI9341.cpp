@@ -6,6 +6,9 @@
 #include "TFT_ILI9341.h"
 #include <SPI.h>
 
+#define _cs P2_0
+#define _dc P2_5 
+
 #define TFT_CS_LOW  {digitalWrite(_cs, LOW);}
 #define TFT_CS_HIGH {digitalWrite(_cs, HIGH);}
 #define TFT_DC_LOW  {digitalWrite(_dc, LOW);}
@@ -46,10 +49,13 @@ void TFT::WriteCmdSeq(const INT8U *data)
   }
 }
 
-void TFT::TFTinit (INT8U cs, INT8U dc)
+void TFT::TFTinit (/*INT8U cs, INT8U dc*/)
 {
+  /*
     _cs=cs;
-    _dc=dc; 
+    _dc=dc;
+   */
+   
     _flags = 0;
 	
     pinMode(_cs,OUTPUT);

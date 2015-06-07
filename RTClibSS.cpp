@@ -2,6 +2,11 @@
 #include <Energia.h>// capital A so it is error prone on case-sensitive filesystems
 #include "RTClibSS.h"
 
+#define sclk_pin_   P2_4    
+#define io_pin_     P2_5    
+#define ce_pin_     P2_2   
+
+
 //#define DS1307_ADDRESS 0x68
 #define SECONDS_PER_DAY 86400L
 
@@ -68,12 +73,14 @@ const char *DateTime::dayOfWeekStr() const {
 ////////////////////////////////////////////////////////////////////////////////
 // RTC_DS1307 implementation
 
+/*
 RTC_DS1302::RTC_DS1302(const uint8_t ce_pin, const uint8_t io_pin,
                const uint8_t sclk_pin) {
   ce_pin_ = ce_pin;
   io_pin_ = io_pin;
   sclk_pin_ = sclk_pin;
 }
+*/
 
 void RTC_DS1302::begin() {
   pinMode(ce_pin_, OUTPUT);

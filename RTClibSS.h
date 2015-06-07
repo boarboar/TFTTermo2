@@ -35,7 +35,7 @@ protected:
 
 class RTC_DS1302 {
 public:
-    RTC_DS1302(uint8_t ce_pin, uint8_t io_pin, uint8_t sclk_pin);
+    //RTC_DS1302(uint8_t ce_pin, uint8_t io_pin, uint8_t sclk_pin);
     void begin(void);
     void adjust(const DateTime& dt);
     DateTime now();
@@ -53,9 +53,11 @@ enum Register {
     kWriteProtectReg = 7
   };
 
+/*
   uint8_t ce_pin_;
   uint8_t io_pin_;
   uint8_t sclk_pin_;
+*/
 
   uint8_t readRegister(Register reg);
   uint8_t readRegisterBcdToDec(Register reg, uint8_t high_bit); 

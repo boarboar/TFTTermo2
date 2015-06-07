@@ -12,16 +12,18 @@
 // MOSI P1_7
 // MISO P1_6
 
-#define TFT_CS_PIN P2_0
-#define TFT_DC_PIN P2_5 
+//#define TFT_CS_PIN P2_0
+//#define TFT_DC_PIN P2_5 
+
 #define TFT_BL_PIN P1_4 
   
-#define DS1302_SCLK_PIN   P2_4    
-#define DS1302_IO_PIN     P2_5    
-#define DS1302_CE_PIN     P2_2   
+//#define DS1302_SCLK_PIN   P2_4    
+//#define DS1302_IO_PIN     P2_5    
+//#define DS1302_CE_PIN     P2_2   
 
-#define NRF_CE_PIN P2_3
-#define NRF_SS_CSN_PIN P2_1
+
+//#define NRF_CE_PIN P2_3
+//#define NRF_SS_CSN_PIN P2_1
 #define NRF_IRQ_PIN P1_0
 
 #define BUTTON_1  P1_3
@@ -125,7 +127,7 @@ TempHistory mHist;
 // ************************ UI
 
 uint32_t mui;
-uint32_t rts=0; // this can be rid off later
+//uint32_t rts=0; // this can be rid off later
 uint16_t _lp_vpos=0; // make 8bit, and prop to char size?
 uint16_t _lp_hpos=0;  // make 8bit, and prop to char size?
 
@@ -156,8 +158,10 @@ uint8_t uilev=WS_UI_MAIN;   // compress ?
 uint8_t pageidx=0; // compress ? 
 
 TFT Tft;
-NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
-RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
+//NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
+NRF24 nrf24;
+//RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
+RTC_DS1302 RTC;
 
 static uint8_t p_time[2]={0xFF, 0xFF};
 static uint8_t p_to[2]={0xFF, 0xFF};
@@ -172,7 +176,7 @@ void setup()
   pinMode(BUTTON_1, INPUT_PULLUP);
   pinMode(BUTTON_2, INPUT_PULLUP);
     
-  Tft.TFTinit(TFT_CS_PIN, TFT_DC_PIN);
+  Tft.TFTinit(/*TFT_CS_PIN, TFT_DC_PIN*/);
   Tft.setOrientation(LCD_LANDSCAPE);
   pinMode(TFT_BL_PIN, OUTPUT);
   digitalWrite(TFT_BL_PIN, HIGH);
@@ -200,7 +204,7 @@ void setup()
 
   mui=millis();
   
-  rts = RTC.now().unixtime();
+  //rts = RTC.now().unixtime();
   updateScreen();
 }
 
@@ -563,7 +567,7 @@ void printStat() {
    uint8_t i;
    line_printn("NOW: "); printDate(now); line_printn(", "); line_print(now.dayOfWeekStr());
    line_printn("UPT: "); dispTimeoutStatic(millis()/1000); line_print("");
-   line_printn("RTT: "); dispTimeoutStatic(now.unixtime()-rts); line_print("");
+   //line_printn("RTT: "); dispTimeoutStatic(now.unixtime()-rts); line_print("");
    for(i=1; i<=TH_SID_SZ; i++) { // i for sid
      mHist.iterBegin(i);  
      while(mHist.movePrev());

@@ -110,7 +110,7 @@ public: enum Palette {
     P_CYAN    = 6,
     };  
 public:
-        void TFTinit (INT8U cs=P2_0, INT8U dc=P2_1);
+        void TFTinit (/*INT8U cs=P2_0, INT8U dc=P2_1*/);
 	void setOrientation(int value);
         void fillScreen(void);
 	void fillScreen(INT16 XL,INT16 XR,INT16 YU,INT16 YD);
@@ -153,7 +153,7 @@ protected:
 	void WRITE_DATA(INT8U data);
 	void sendData(INT16U data);
 
-	INT8U _cs, _dc;
+	//INT8U _cs, _dc;
        //Ctx 
         INT8U _flags;	
         INT8U _size_mask_thick;
