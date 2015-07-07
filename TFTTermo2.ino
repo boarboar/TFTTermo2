@@ -94,6 +94,9 @@
 #define WS_BUT_CLICK 14 
 #define WS_BUT_LONG 15
 
+//#define WS_TIMESET_DIG 4
+#define WS_TIMESET_DIG 10
+
 #define CHART_WIDTH 240
 #define CHART_HEIGHT 204
 #define CHART_TOP 19
@@ -286,7 +289,7 @@ void processShortClick() {
   if(uilev==WS_UI_SET && pageidx) { // in edit mode - move to next digit
     dispStat("EDIT MOV");
     hiLightDigit(BLACK);
-    if(++pageidx>4) pageidx=1;
+    if(++pageidx>WS_TIMESET_DIG) pageidx=1;
     hiLightDigit(WHITE);
   }
   else { // move to next screen
@@ -554,9 +557,17 @@ void dispStat(const char *pbuf) {
 }
 
 void hiLightDigit(uint16_t color) {
-  uint8_t d=(pageidx>0 && pageidx<3)?pageidx-1:pageidx;
+  uint8_t x=pageidx;
+  uint8_t y=0;
+  if(pageidx>4) { // date
+    x-=4;
+    y++;
+  }
+  //uint8_t d=(pageidx>0 && pageidx<3)?pageidx-1:pageidx;
+  uint8_t d=(x>0 && x<3)? x-1 :
+            (x>4 ) ? x+1 :x;
   Tft.setColor(color);
-  Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, WS_SCREEN_TIME_LINE_Y, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);
+  Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, WS_SCREEN_TIME_LINE_Y+y*WS_CHAR_TIME_SET_SZ*FONT_Y, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);  
 }
 
 
@@ -580,8 +591,7 @@ void printStat() {
      if(alarms&(1<<i)) line_print("Y");
      else line_print("N");
    }  
-}
-       
+}   
        
 uint8_t printHist(uint8_t sid, uint8_t idx) {
   if(!startIter(sid)) return 0; 
@@ -608,7 +618,6 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
   return i;  
 }
 
-
 void chartHist() {    
   const uint8_t chart_xstep_denoms[WS_CHART_NLEV]={7, 21, 49, 217};
   uint8_t chart_xstep_denom = chart_xstep_denoms[pageidx];
@@ -619,7 +628,14 @@ void chartHist() {
   
   { // ++scope 1
   int16_t x0, y0;  
-  _S.CV.xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
+  //_S.CV.xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
+  _S.CV.xr=0;
+  for(i=1; i<=TH_SID_SZ; i++) { // i for sid
+     mHist.iterBegin(i);  
+     while(mHist.movePrev());
+     if(mHist.getPrevMinsBefore()>_S.CV.xr) _S.CV.xr=mHist.getPrevMinsBefore();
+   }
+  _S.CV.xr/=chart_xstep_denom;
   if(_S.CV.xr>=CHART_WIDTH) _S.CV.xr=CHART_WIDTH-1; 
   drawVertDashLine(_S.CV.xr, BLUE);
   if(_S.CV.xr>12) { // draw midnight lines  
@@ -639,8 +655,7 @@ void chartHist() {
       if(i) i--; else i=6;
     }
   }   
-   
-   
+      
   Tft.setThick(5);  
   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
     Tft.setColor(cc[i-1]);
@@ -653,7 +668,7 @@ void chartHist() {
       x0=_S.CV.x1; y0=_S.CV.y1;
     } while(mHist.movePrev() && x0>0);
   } //for sid    
-  
+ 
   } // --scope 1  
 }
 
