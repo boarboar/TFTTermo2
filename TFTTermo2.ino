@@ -141,6 +141,7 @@ uint16_t msgcnt=0; // this can be rid off later
 int16_t mint, maxt; // this is for charting
 union {
   char buf[6];
+  uint8_t dt[6];
   struct { int16_t xr, x1, y1; } CV;
   struct { int16_t acc, h, y0; } HV;
   struct { int16_t ig; } CPV;
@@ -161,9 +162,7 @@ uint8_t uilev=WS_UI_MAIN;   // compress ?
 uint8_t pageidx=0; // compress ? 
 
 TFT Tft;
-//NRF24 nrf24(NRF_CE_PIN, NRF_SS_CSN_PIN);
 NRF24 nrf24;
-//RTC_DS1302 RTC(DS1302_CE_PIN, DS1302_IO_PIN, DS1302_SCLK_PIN);
 RTC_DS1302 RTC;
 
 static uint8_t p_time[2]={0xFF, 0xFF};
@@ -221,9 +220,7 @@ void loop()
    if(err) dispErr(err);
    else {
      flags |= WS_FLAG_ONDATAUPDATE;
-     //updateScreen();
-     //flags|=WS_FLAG_NEEDUPDATE;
-     dispStat("READ ");
+     //dispStat("READ ");
    }
   }
 
@@ -232,7 +229,6 @@ void loop()
    mui=_S.MLV.ms;
    if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && pageidx) && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
-     //updateScreen();
      flags|=WS_FLAG_NEEDUPDATE;
    }
 
@@ -250,20 +246,23 @@ void loop()
      if(btcnt2==WS_BUT_CLICK) processShortRightClick(); 
      btcnt2=0;     
    }
-   
-   //if(flags&WS_FLAG_NEEDUPDATE)
-   if(flags&(WS_FLAG_NEEDUPDATE|WS_FLAG_ONDATAUPDATE))
-     updateScreen();
+
+   if(uilev!=WS_UI_SET) {
+     if(flags&WS_FLAG_NEEDUPDATE)
+       dispStat("READ ");
+     if(flags&(WS_FLAG_NEEDUPDATE|WS_FLAG_ONDATAUPDATE))
+       updateScreen();
      
-   if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
-     disp_cnt=0;   
-     if(inact_cnt) inact_cnt--;
+     if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
+       disp_cnt=0;   
+       if(inact_cnt) inact_cnt--;
        if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout, at the moment for SID1 only....           
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen();       
-     }
-     updateScreenTime(false);       
-   }  
+       }
+       updateScreenTime(false);       
+     }     
+   }
  } // UI cycle
  
 }
@@ -304,13 +303,14 @@ void processLongClick() {
   if(uilev==WS_UI_SET) {
     if(!pageidx) {
       dispStat("EDIT  ON");
-      pageidx=1;
+//      pageidx=1;
+      timeEditOn();
       hiLightDigit(WHITE);
     } else {
       dispStat("EDIT OFF");
       timeStore();
-      hiLightDigit(BLACK);
-      pageidx=0;
+//      hiLightDigit(BLACK);
+//      pageidx=0;
       dispStat("TIME STR");
     }
   } /*else {
@@ -448,14 +448,6 @@ void updateScreenTime(bool reset) {
 
 // buf 5
 char *printTemp(int16_t disptemp) {
-  /*
-  char s='+';
-  if(disptemp<0) {
-    s='-';
-    disptemp=-disptemp;
-  } else if(disptemp==0) s=' ';
-  _S.buf[0]=s; 
-  */
   _S.buf[0]='+';
   if(disptemp<0) {
     _S.buf[0]='-';
@@ -518,6 +510,10 @@ void printDate(const DateTime& pDT) {
  line_printn(itoas2(pDT.day())); line_printn("/"); line_printn(itoas2(pDT.month())); line_printn("/"); line_printn(itoas2(pDT.year()));
 }
 
+void timeEditOn() {
+  pageidx=1;
+}
+
 void timeUp(uint8_t dig, int sz) {
   //dig=0..3
   //hhmm
@@ -540,6 +536,8 @@ void timeStore() {
   DateTime set=RTC.now();
   set.setTime(p_time[0], p_time[1], 0);
   RTC.adjust(set); 
+  hiLightDigit(BLACK);
+  pageidx=0;
 }
 
 void dispErr(uint8_t err) {
