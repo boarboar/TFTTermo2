@@ -247,8 +247,8 @@ void loop()
      btcnt2=0;     
    }
 
-   if(uilev!=WS_UI_SET) {
-     if(flags&WS_FLAG_NEEDUPDATE)
+   if(!(uilev==WS_UI_SET && pageidx>0)) { // in edit mode
+     if(flags&WS_FLAG_ONDATAUPDATE)
        dispStat("READ ");
      if(flags&(WS_FLAG_NEEDUPDATE|WS_FLAG_ONDATAUPDATE))
        updateScreen();
