@@ -111,6 +111,8 @@
 
 #define printVal(T, V) ((T)==TH_HIST_VAL_T ? printTemp(V) : printVcc(V))
 
+#define TIME_SET_MODE() (uilev==WS_UI_SET && pageidx>0)
+
 const char *addr="wserv";
 
 const char *lnames[] = {"", "Stat", "Hist", "Temp", "Day", "Vcc", "Set"};
@@ -227,7 +229,7 @@ void loop()
   _S.MLV.ms=millis(); 
   if(_S.MLV.ms-mui>WS_UI_CYCLE || _S.MLV.ms<mui) { // UI cycle
    mui=_S.MLV.ms;
-   if(uilev!=WS_UI_MAIN && !(uilev==WS_UI_SET && pageidx) && !inact_cnt) {  // back to main screen after user inactivity timeout
+   if(uilev!=WS_UI_MAIN && !TIME_SET_MODE() && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
      flags|=WS_FLAG_NEEDUPDATE;
    }
@@ -247,7 +249,7 @@ void loop()
      btcnt2=0;     
    }
 
-   if(!(uilev==WS_UI_SET && pageidx>0)) { // in edit mode
+   if(!TIME_SET_MODE()) { // in edit mode
      if(flags&WS_FLAG_ONDATAUPDATE)
        dispStat("READ ");
      if(flags&(WS_FLAG_NEEDUPDATE|WS_FLAG_ONDATAUPDATE))
@@ -285,7 +287,7 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 }
 
 void processShortClick() {
-  if(uilev==WS_UI_SET && pageidx) { // in edit mode - move to next digit
+  if(TIME_SET_MODE()) { // in edit mode - move to next digit
     dispStat("EDIT MOV");
     hiLightDigit(BLACK);
     if(++pageidx>WS_TIMESET_DIG) pageidx=1;
@@ -512,6 +514,8 @@ void printDate(const DateTime& pDT) {
 
 void timeEditOn() {
   pageidx=1;
+  DateTime now=RTC.now();
+  _S.dt[0]=now.hour(); _S.dt[1]=now.minute(); 
 }
 
 void timeUp(uint8_t dig, int sz) {
@@ -521,7 +525,8 @@ void timeUp(uint8_t dig, int sz) {
   if(dig>3) return;
   uint8_t ig=dig/2; // 0-h, 1-m
   uint8_t id=(dig+1)%2; // 1-high dec, 0 - low dec 
-  uint8_t val=p_time[ig];
+  //uint8_t val=p_time[ig];
+  uint8_t val=_S.dt[ig];
   const uint8_t maxv[2]={24, 60};
   uint8_t pos=ig*3; uint8_t disp=0;
   if(id) { val+=10; if(val>maxv[ig]) val=val%10; disp=val/10;}  
@@ -529,12 +534,14 @@ void timeUp(uint8_t dig, int sz) {
   Tft.setSize(sz);
   Tft.setColor(GREEN);
   Tft.drawCharLowRAM('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
-  p_time[ig]=val; 
+  //p_time[ig]=val; 
+  _S.dt[ig]=val;
 }
 
 void timeStore() {
   DateTime set=RTC.now();
-  set.setTime(p_time[0], p_time[1], 0);
+  //set.setTime(p_time[0], p_time[1], 0);
+  set.setTime(_S.dt[0], _S.dt[1], 0);
   RTC.adjust(set); 
   hiLightDigit(BLACK);
   pageidx=0;
