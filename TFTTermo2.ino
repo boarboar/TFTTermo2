@@ -140,17 +140,19 @@ uint16_t msgcnt=0; // this can be rid off later
 
 // trancient vars
 
-int16_t mint, maxt; // this is for charting
 union {
   char buf[6];
-  uint8_t dt[6];
+//  uint8_t dt[6];
   struct { int16_t xr, x1, y1; } CV;
   struct { int16_t acc, h, y0; } HV;
   struct { int16_t ig; } CPV;
   struct { unsigned long ms; } MLV;
 } _S;
 
-//uint8_t err=0; // do we need it as external var???
+union {
+  struct { int16_t mint, maxt; } CMM; // this is for charting
+} _S2;
+
 volatile uint8_t flags=0; // flgs in HI half, chart type encoded in LO half
 
 uint8_t alarms=0;
@@ -220,13 +222,10 @@ void loop()
    flags &= ~WS_FLAG_RFREAD;
    uint8_t err=radioRead();  
    if(err) dispErr(err);
-   else { 
+   else 
      flags |= WS_FLAG_ONDATAUPDATE;
-     //dispStat("READ ");
-   }
   }
 
-/*
   _S.MLV.ms=millis(); 
   if(_S.MLV.ms-mui>WS_UI_CYCLE || _S.MLV.ms<mui) { // UI cycle
    mui=_S.MLV.ms;
@@ -234,14 +233,15 @@ void loop()
      uilev=WS_UI_MAIN;
      flags|=WS_FLAG_NEEDUPDATE;
    }
-*/
 
+/*
   if(millis()-mui>WS_UI_CYCLE || millis()<mui) { // UI cycle
    mui=millis();
    if(uilev!=WS_UI_MAIN && !TIME_SET_MODE() && !inact_cnt) {  // back to main screen after user inactivity timeout
      uilev=WS_UI_MAIN;
      flags|=WS_FLAG_NEEDUPDATE;
    }
+*/
 
    btcnt1=processClick(BUTTON_1, btcnt1);
    if(btcnt1>WS_BUT_MAX) {
@@ -296,9 +296,12 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 void processShortClick() {
   if(TIME_SET_MODE()) { // in edit mode - move to next digit
     dispStat("EDIT MOV");
+    timeEditMove();
+    /*
     hiLightDigit(BLACK);
     if(++pageidx>WS_TIMESET_DIG) pageidx=1;
     hiLightDigit(WHITE);
+    */
   }
   else { // move to next screen
     uilev=(uilev+1)%WS_NUILEV;
@@ -313,7 +316,7 @@ void processLongClick() {
     if(!pageidx) {
       dispStat("EDIT  ON");
       timeEditOn();
-      hiLightDigit(WHITE);
+//      hiLightDigit(WHITE);
     } else {
       dispStat("EDIT OFF");
       timeStore();
@@ -442,6 +445,7 @@ void updateScreenTime(bool reset) {
   
   if(sz) {
     DateTime now = RTC.now();
+    /*
     if(reset || now.hour()!=p_time[0]) {
       Tft.setSize(dsz);
       Tft.setColor(YELLOW);
@@ -449,6 +453,18 @@ void updateScreenTime(bool reset) {
       printDate(now);
     }
     printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
+    */
+
+    if(reset || now.hour()!=p_time[0] || now.minute()!=p_time[1]) {
+      printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, sz);   
+      p_time[0]=now.hour(); p_time[1]=now.minute();
+    }        
+    if(reset || now.hour()!=p_time[0]) {
+      Tft.setSize(dsz);
+      Tft.setColor(YELLOW);
+      line_setpos(dx, dy);
+      printDate(now);
+    }            
   } 
 }
 
@@ -500,6 +516,7 @@ void dispTimeoutStatic(uint32_t ts) {
   }     
 }
 
+/*
 void printTime(const DateTime& pDT, bool reset, int x, int y, int sz){
   uint8_t h=pDT.hour(), m=pDT.minute(); 
   if(reset || h!=p_time[0] || m!=p_time[1]) {
@@ -511,6 +528,16 @@ void printTime(const DateTime& pDT, bool reset, int x, int y, int sz){
     lcd_defaults();
   }
 }
+*/
+
+void printTime2(const DateTime& pDT, int x, int y, int sz){
+  uint8_t h=pDT.hour(), m=pDT.minute(); 
+  Tft.setSize(sz);
+  Tft.setColor(YELLOW);
+  line_setpos(x, y);
+  line_printn(itoas2(h)); line_printn(":"); line_printn(itoas2(m));
+  lcd_defaults();
+}
 
 void printDate(const DateTime& pDT) {
  line_printn(itoas2(pDT.day())); line_printn("/"); line_printn(itoas2(pDT.month())); line_printn("/"); line_printn(itoas2(pDT.year()));
@@ -520,6 +547,13 @@ void timeEditOn() {
   pageidx=1;
   DateTime now=RTC.now();
 //  _S.dt[0]=now.hour(); _S.dt[1]=now.minute(); 
+  hiLightDigit(WHITE);
+}
+
+void timeEditMove() {
+  hiLightDigit(BLACK);
+  if(++pageidx>WS_TIMESET_DIG) pageidx=1;
+  hiLightDigit(WHITE);
 }
 
 void timeUp(uint8_t dig, int sz) {
@@ -633,11 +667,10 @@ void chartHist() {
   uint8_t i;
 
   prepChart(0xFF, GETCHRT(), (uint16_t)CHART_WIDTH*chart_xstep_denom+60);
-  if(maxt==mint) return;
+  if(_S2.CMM.maxt==_S2.CMM.mint) return;
   
   { // ++scope 1
   int16_t x0, y0;  
-  //_S.CV.xr=mHist.getPrevMinsBefore()/chart_xstep_denom;
   _S.CV.xr=0;
   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
      mHist.iterBegin(i);  
@@ -671,7 +704,7 @@ void chartHist() {
     x0=y0=0;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
-      _S.CV.y1=(int32_t)(maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(maxt-mint)+CHART_TOP;
+      _S.CV.y1=(int32_t)(_S2.CMM.maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint)+CHART_TOP;
       _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
       if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
       x0=_S.CV.x1; y0=_S.CV.y1;
@@ -689,7 +722,7 @@ void chartHist60()
 
   { // histogramm scope
   prepChart(pageidx+1, TH_HIST_VAL_T, (uint16_t)DUR_24*60+60);  
-  if(maxt==mint) return;
+  if(_S2.CMM.maxt==_S2.CMM.mint) return;
   
   Tft.setBgColor(cc[pageidx]);
   
@@ -707,15 +740,15 @@ void chartHist60()
     if(is!=islot) {  
       // draw prev;
       if(cnt) {
-        _S.HV.y0=(int32_t)maxt*CHART_HEIGHT/(maxt-mint); // from top
+        _S.HV.y0=(int32_t)_S2.CMM.maxt*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint); // from top
         _S.HV.acc/=cnt;        
         if(_S.HV.acc<0) {
-          if(maxt<0) { _S.HV.y0=0; _S.HV.h=maxt-_S.HV.acc; } else { _S.HV.h=-_S.HV.acc; } 
+          if(_S2.CMM.maxt<0) { _S.HV.y0=0; _S.HV.h=_S2.CMM.maxt-_S.HV.acc; } else { _S.HV.h=-_S.HV.acc; } 
         }
         else {
-          if(mint>0) { _S.HV.y0=CHART_HEIGHT; _S.HV.h=_S.HV.acc-mint;} else {_S.HV.h=_S.HV.acc; }
+          if(_S2.CMM.mint>0) { _S.HV.y0=CHART_HEIGHT; _S.HV.h=_S.HV.acc-_S2.CMM.mint;} else {_S.HV.h=_S.HV.acc; }
         }
-        _S.HV.h=(int32_t)_S.HV.h*CHART_HEIGHT/(maxt-mint);
+        _S.HV.h=(int32_t)_S.HV.h*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint);
         if(_S.HV.acc>0) _S.HV.y0-=_S.HV.h;     
         _S.HV.acc=CHART_WIDTH-xstep*is+1;
         if(_S.HV.acc>=0)
@@ -733,7 +766,8 @@ void chartHist60()
   { // time labels scope
   lcd_defaults();
   DateTime now = RTC.now();  
-  printTime(now, true, CHART_WIDTH, 224, 2);   
+  //printTime(now, true, CHART_WIDTH, 224, 2);   
+  printTime2(now, CHART_WIDTH, 224, 2);   
   uint16_t mid = now.hour()+1; // unionize with buf
   drawVertDashLine(CHART_WIDTH-xstep*mid, YELLOW); // draw midnight line
   mid=mid>12 ? mid-12 : mid+12;
@@ -753,11 +787,11 @@ int8_t startIter(uint8_t sid) {
 
 
 void prepChart(uint8_t  s, uint8_t type, uint16_t m) {
-  maxt=mint=0;
+  _S2.CMM.maxt=_S2.CMM.mint=0;
   if(!startIter(s)) return;
   
   line_init(); 
-  maxt=-9999; mint=9999; // VERY BAD!!!!
+  _S2.CMM.maxt=-9999; _S2.CMM.mint=9999; // VERY BAD!!!!
   
   { // ++scope 1
   uint8_t sid0, sid1;
@@ -769,32 +803,32 @@ void prepChart(uint8_t  s, uint8_t type, uint16_t m) {
     if(mHist.movePrev()) {  
       do {
         int16_t t = mHist.getPrev()->getVal(type);
-        if(t>maxt) maxt=t;
-        if(t<mint) mint=t;
+        if(t>_S2.CMM.maxt) _S2.CMM.maxt=t;
+        if(t<_S2.CMM.mint) _S2.CMM.mint=t;
       } while(mHist.movePrev() && mHist.getPrevMinsBefore()<m);
     }
   } while(++sid0<=sid1);
   } // --scope 1
   
-  line_printn(printVal(type, mint)); line_printn("..."); line_printn(printVal(type, maxt)); 
+  line_printn(printVal(type, _S2.CMM.mint)); line_printn("..."); line_printn(printVal(type, _S2.CMM.maxt)); 
   
-  if(mint%50) {
-    if(mint>0) mint=(mint/50)*50;
-     else mint=(mint/50-1)*50;
+  if(_S2.CMM.mint%50) {
+    if(_S2.CMM.mint>0) _S2.CMM.mint=(_S2.CMM.mint/50)*50;
+     else _S2.CMM.mint=(_S2.CMM.mint/50-1)*50;
   }  
-  if(maxt%50) {
-     if(maxt>0) maxt=(maxt/50+1)*50;
-     else maxt=(maxt/50)*50;
+  if(_S2.CMM.maxt%50) {
+     if(_S2.CMM.maxt>0) _S2.CMM.maxt=(_S2.CMM.maxt/50+1)*50;
+     else _S2.CMM.maxt=(_S2.CMM.maxt/50)*50;
   }  
-  if(maxt==mint) {mint-=50; maxt+=50;}  
+  if(_S2.CMM.maxt==_S2.CMM.mint) {_S2.CMM.mint-=50; _S2.CMM.maxt+=50;}  
   
   Tft.setColor(WHITE); 
   Tft.drawRectangle(0, CHART_TOP, CHART_WIDTH, CHART_HEIGHT);
   { // ++scope 2
-  s=(maxt-mint)>100 ? 50 : 10;  
-  for(int16_t ig=mint; ig<=maxt; ig+=s) { // degree lines
-     m=CHART_TOP+(int32_t)(maxt-ig)*CHART_HEIGHT/(maxt-mint);
-     if(ig>mint && ig<maxt) {
+  s=(_S2.CMM.maxt-_S2.CMM.mint)>100 ? 50 : 10;  
+  for(int16_t ig=_S2.CMM.mint; ig<=_S2.CMM.maxt; ig+=s) { // degree lines
+     m=CHART_TOP+(int32_t)(_S2.CMM.maxt-ig)*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint);
+     if(ig>_S2.CMM.mint && ig<_S2.CMM.maxt) {
        Tft.setColor(ig==0? BLUE : GREEN);
        Tft.drawHorizontalLine(0, m, CHART_WIDTH);
      }
