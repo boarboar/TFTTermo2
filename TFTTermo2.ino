@@ -269,7 +269,7 @@ void loop()
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen();       
        }
-       updateScreenTime(false);       
+       if(uilev==WS_UI_MAIN) updateScreenTime(false);       
      }     
    }
  } // UI cycle
@@ -297,16 +297,10 @@ void processShortClick() {
   if(TIME_SET_MODE()) { // in edit mode - move to next digit
     dispStat("EDIT MOV");
     timeEditMove();
-    /*
-    hiLightDigit(BLACK);
-    if(++pageidx>WS_TIMESET_DIG) pageidx=1;
-    hiLightDigit(WHITE);
-    */
   }
   else { // move to next screen
     uilev=(uilev+1)%WS_NUILEV;
     pageidx=0; 
-    //updateScreen();
     flags|=WS_FLAG_NEEDUPDATE;
   }
 }
@@ -316,7 +310,6 @@ void processLongClick() {
     if(!pageidx) {
       dispStat("EDIT  ON");
       timeEditOn();
-//      hiLightDigit(WHITE);
     } else {
       dispStat("EDIT OFF");
       timeStore();
@@ -429,6 +422,7 @@ void updateScreenTime(bool reset) {
   uint8_t dsz;
   uint16_t dy;
   uint16_t dx;
+  if(reset) { p_time[0]=p_time[1];}
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
     dsz=WS_CHAR_TIME_SZ/2;
@@ -445,17 +439,7 @@ void updateScreenTime(bool reset) {
   
   if(sz) {
     DateTime now = RTC.now();
-    /*
-    if(reset || now.hour()!=p_time[0]) {
-      Tft.setSize(dsz);
-      Tft.setColor(YELLOW);
-      line_setpos(dx, dy);
-      printDate(now);
-    }
-    printTime(now, reset, 0, WS_SCREEN_TIME_LINE_Y, sz);   
-    */
-
-    if(reset || now.hour()!=p_time[0] || now.minute()!=p_time[1]) {
+    if(/*reset || */now.hour()!=p_time[0] || now.minute()!=p_time[1]) {
       printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, sz);   
       p_time[0]=now.hour(); p_time[1]=now.minute();
     }        
@@ -493,7 +477,8 @@ char *printVcc(int16_t vcc) {
 void dispTimeoutTempM(uint8_t sid, bool reset) {
   line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1)+FONT_Y*WS_CHAR_TEMP_SZ/2);
   uint8_t tm=mHist.getHeadDelay(sid);
-  if(tm != p_to[sid-1] || reset) {
+  if(reset) p_to[sid-1]=0xFF;
+  if(tm != p_to[sid-1]/* || reset*/) {
     uint8_t hm=tm/60;
     if(hm>0) {
       line_printn(">"); line_printn(itoas2(hm)); line_printn(" H");    
@@ -516,20 +501,6 @@ void dispTimeoutStatic(uint32_t ts) {
   }     
 }
 
-/*
-void printTime(const DateTime& pDT, bool reset, int x, int y, int sz){
-  uint8_t h=pDT.hour(), m=pDT.minute(); 
-  if(reset || h!=p_time[0] || m!=p_time[1]) {
-    Tft.setSize(sz);
-    Tft.setColor(YELLOW);
-    line_setpos(x, y);
-    line_printn(itoas2(h)); line_printn(":"); line_printn(itoas2(m));
-    p_time[0]=h; p_time[1]=m;
-    lcd_defaults();
-  }
-}
-*/
-
 void printTime2(const DateTime& pDT, int x, int y, int sz){
   uint8_t h=pDT.hour(), m=pDT.minute(); 
   Tft.setSize(sz);
@@ -546,7 +517,7 @@ void printDate(const DateTime& pDT) {
 void timeEditOn() {
   pageidx=1;
   DateTime now=RTC.now();
-//  _S.dt[0]=now.hour(); _S.dt[1]=now.minute(); 
+  p_time[0]=now.hour(); p_time[1]=now.minute(); 
   hiLightDigit(WHITE);
 }
 
