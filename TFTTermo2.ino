@@ -151,6 +151,7 @@ union {
 
 union {
   struct { int16_t mint, maxt; } CMM; // this is for charting
+  struct { uint8_t p_time[2], p_to[2]; } TT; // main screen time and timeout display
 } _S2;
 
 volatile uint8_t flags=0; // flgs in HI half, chart type encoded in LO half
@@ -169,8 +170,8 @@ TFT Tft;
 NRF24 nrf24;
 RTC_DS1302 RTC;
 
-static uint8_t p_time[2]={0xFF, 0xFF};
-static uint8_t p_to[2]={0xFF, 0xFF};
+//static uint8_t p_time[2]={0xFF, 0xFF};
+//static uint8_t p_to[2]={0xFF, 0xFF};
 
 void setup()
 {
@@ -422,7 +423,7 @@ void updateScreenTime(bool reset) {
   uint8_t dsz;
   uint16_t dy;
   uint16_t dx;
-  if(reset) { p_time[0]=p_time[1];}
+  if(reset) { _S2.TT.p_time[0]=_S2.TT.p_time[1]=0xFF;}
   if(uilev==WS_UI_MAIN) {
     sz=WS_CHAR_TIME_SZ;
     dsz=WS_CHAR_TIME_SZ/2;
@@ -439,11 +440,11 @@ void updateScreenTime(bool reset) {
   
   if(sz) {
     DateTime now = RTC.now();
-    if(/*reset || */now.hour()!=p_time[0] || now.minute()!=p_time[1]) {
+    if(/*reset || */now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
       printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, sz);   
-      p_time[0]=now.hour(); p_time[1]=now.minute();
+      _S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute();
     }        
-    if(reset || now.hour()!=p_time[0]) {
+    if(reset || now.hour()!=_S2.TT.p_time[0]) {
       Tft.setSize(dsz);
       Tft.setColor(YELLOW);
       line_setpos(dx, dy);
@@ -477,8 +478,8 @@ char *printVcc(int16_t vcc) {
 void dispTimeoutTempM(uint8_t sid, bool reset) {
   line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1)+FONT_Y*WS_CHAR_TEMP_SZ/2);
   uint8_t tm=mHist.getHeadDelay(sid);
-  if(reset) p_to[sid-1]=0xFF;
-  if(tm != p_to[sid-1]/* || reset*/) {
+  if(reset) _S2.TT.p_to[sid-1]=0xFF;
+  if(tm != _S2.TT.p_to[sid-1]/* || reset*/) {
     uint8_t hm=tm/60;
     if(hm>0) {
       line_printn(">"); line_printn(itoas2(hm)); line_printn(" H");    
@@ -487,7 +488,7 @@ void dispTimeoutTempM(uint8_t sid, bool reset) {
       hm=tm%60;
       line_printn(itoas2(hm)); line_printn(":00");
     }
-    p_to[sid-1]=tm;
+    _S2.TT.p_to[sid-1]=tm;
   }
 }
 
@@ -517,7 +518,7 @@ void printDate(const DateTime& pDT) {
 void timeEditOn() {
   pageidx=1;
   DateTime now=RTC.now();
-  p_time[0]=now.hour(); p_time[1]=now.minute(); 
+  _S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute(); 
   hiLightDigit(WHITE);
 }
 
@@ -534,7 +535,7 @@ void timeUp(uint8_t dig, int sz) {
   if(dig>3) return;
   uint8_t ig=dig/2; // 0-h, 1-m
   uint8_t id=(dig+1)%2; // 1-high dec, 0 - low dec 
-  uint8_t val=p_time[ig];
+  uint8_t val=_S2.TT.p_time[ig];
   //uint8_t val=_S.dt[ig];
   const uint8_t maxv[2]={24, 60};
   uint8_t pos=ig*3; uint8_t disp=0;
@@ -543,13 +544,13 @@ void timeUp(uint8_t dig, int sz) {
   Tft.setSize(sz);
   Tft.setColor(GREEN);
   Tft.drawCharLowRAM('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
-  p_time[ig]=val; 
+  _S2.TT.p_time[ig]=val; 
   //_S.dt[ig]=val;
 }
 
 void timeStore() {
   DateTime set=RTC.now();
-  set.setTime(p_time[0], p_time[1], 0);
+  set.setTime(_S2.TT.p_time[0], _S2.TT.p_time[1], 0);
   //set.setTime(_S.dt[0], _S.dt[1], 0);
   RTC.adjust(set); 
   hiLightDigit(BLACK);
