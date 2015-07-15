@@ -504,6 +504,7 @@ void printDate(const DateTime& pDT) {
 }
 
 void dispSetTime() {
+  Tft.fillScreen();
   DateTime now = RTC.now();
   if(pageidx==0 || _S2.TS.dtf==0) { // idle or edit time
     printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
@@ -522,6 +523,8 @@ void timeEditOn() {
   //_S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute(); 
   _S2.TS.dt[0]=now.hour(); _S2.TS.dt[1]=now.minute(); 
   _S2.TS.dtf=0; // time edit
+        dispSetTime();
+
   hiLightDigit(WHITE);
   dispStat("EDT T ON");
 }
@@ -568,14 +571,16 @@ void timeStore() {
     pageidx=1;
     _S2.TS.dtf=1; // move to date
     
-      Tft.fillScreen();
+      //Tft.fillScreen();
       dispSetTime();
       hiLightDigit(WHITE);    
 
     dispStat("TIME STR");
   } else {
+    pageidx=0;
+    //hiLightDigit(BLACK);
+      dispSetTime();
     
-    hiLightDigit(BLACK);    
     dispStat("DATE STR");
   }
 }
