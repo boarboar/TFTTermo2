@@ -94,8 +94,9 @@
 #define WS_BUT_CLICK 14 
 #define WS_BUT_LONG 15
 
-//#define WS_TIMESET_DIG 4
-#define WS_TIMESET_DIG 10
+#define WS_TIMESET_DIG_T 4
+#define WS_TIMESET_DIG_D 6
+//#define WS_TIMESET_DIG 10
 
 #define CHART_WIDTH 240
 #define CHART_HEIGHT 204
@@ -140,7 +141,7 @@ uint16_t msgcnt=0; // this can be rid off later
 
 // trancient vars
 
-union {
+__attribute__((__packed__)) union {
   char buf[6];
   struct { int16_t xr, x1, y1; } CV;
   struct { int16_t acc, h, y0; } HV;
@@ -148,10 +149,10 @@ union {
   struct { unsigned long ms; } MLV;
 } _S;
 
-union {
+__attribute__((__packed__)) union {
   struct { int16_t mint, maxt; } CMM; // this is for charting
   struct { uint8_t p_time[2], p_to[2]; } TT; // main screen time and timeout display
-  struct { uint8_t dt[6]; } TS; // time set
+  struct { uint8_t dt[3]; uint8_t dtf;} TS; // time set
 } _S2;
 
 volatile uint8_t flags=0; // flgs in HI half, chart type encoded in LO half
@@ -287,7 +288,6 @@ int8_t processClick(uint8_t id, uint8_t cnt) {
 
 void processShortClick() {
   if(TIME_SET_MODE()) { // in edit mode - move to next digit
-    dispStat("EDIT MOV");
     timeEditMove();
   }
   else { // move to next screen
@@ -300,13 +300,10 @@ void processShortClick() {
 void processLongClick() {
   if(uilev==WS_UI_SET) {
     if(!pageidx) {
-      dispStat("EDIT  ON");
       timeEditOn();
     } else {
-      dispStat("EDIT OFF");
       timeStore();
-      updateScreenTime(true);
-      dispStat("TIME STR");
+      //updateScreenTime(true);
     }
   } 
 }
@@ -330,7 +327,7 @@ void processShortRightClick() {
     case WS_UI_SET:
       if(pageidx) {
         timeUp(pageidx-1, WS_CHAR_TIME_SET_SZ);
-        hiLightDigit(WHITE);
+        //hiLightDigit(WHITE);
       }   
      break;
    default:break;  
@@ -375,7 +372,8 @@ void updateScreen() {
       printStat();    
       break;
     case WS_UI_SET: 
-      updateScreenTime(true);  
+      //updateScreenTime(true);  
+      dispSetTime();
       break;
     default: break;
   }
@@ -420,13 +418,13 @@ void updateScreenTime(bool reset) {
     dy=0;
     dx=WS_CHAR_TIME_SZ*FONT_SPACE*8;
     for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
-  } else if(uilev==WS_UI_SET) {
+  }/* else if(uilev==WS_UI_SET) {
       if(!pageidx) {
         dsz=sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
         dx=0;
         dy=WS_CHAR_TIME_SET_SZ*FONT_Y;
-      }
-  }
+      } 
+  }*/
   
   if(sz) {
     DateTime now = RTC.now();
@@ -505,17 +503,36 @@ void printDate(const DateTime& pDT) {
  line_printn(itoas2(pDT.day())); line_printn("/"); line_printn(itoas2(pDT.month())); line_printn("/"); line_printn(itoas2(pDT.year()));
 }
 
+void dispSetTime() {
+  DateTime now = RTC.now();
+  if(pageidx==0 || _S2.TS.dtf==0) { // idle or edit time
+    printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
+  }
+  if(pageidx==0 || _S2.TS.dtf==1) {
+    Tft.setSize(WS_CHAR_TIME_SET_SZ);
+    Tft.setColor(YELLOW);
+    line_setpos(0, pageidx==0 ? WS_CHAR_TIME_SET_SZ*FONT_Y : 0);
+    printDate(now);
+  }  
+}
+
 void timeEditOn() {
   pageidx=1;
   DateTime now=RTC.now();
   //_S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute(); 
   _S2.TS.dt[0]=now.hour(); _S2.TS.dt[1]=now.minute(); 
+  _S2.TS.dtf=0; // time edit
   hiLightDigit(WHITE);
+  dispStat("EDT T ON");
 }
 
 void timeEditMove() {
+  dispStat("EDIT MOV");
   hiLightDigit(BLACK);
-  if(++pageidx>WS_TIMESET_DIG) pageidx=1;
+  //if(++pageidx>WS_TIMESET_DIG_T) pageidx=1;
+  ++pageidx;
+  if(_S2.TS.dtf==0) { if(pageidx>WS_TIMESET_DIG_T) pageidx=1; }
+  else { if(pageidx>WS_TIMESET_DIG_D) pageidx=1; }
   hiLightDigit(WHITE);
 }
 
@@ -537,15 +554,45 @@ void timeUp(uint8_t dig, int sz) {
   Tft.drawCharLowRAM('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
   //_S2.TT.p_time[ig]=val; 
   _S2.TS.dt[ig]=val; 
+  hiLightDigit(WHITE);
 }
 
 void timeStore() {
   DateTime set=RTC.now();
   //set.setTime(_S2.TT.p_time[0], _S2.TT.p_time[1], 0);
-  set.setTime(_S2.TS.dt[0], _S2.TS.dt[1], 0);
-  RTC.adjust(set); 
-  hiLightDigit(BLACK);
-  pageidx=0;
+  if(_S2.TS.dtf==0) { // time store
+    set.setTime(_S2.TS.dt[0], _S2.TS.dt[1], 0);
+    RTC.adjust(set); 
+    hiLightDigit(BLACK);
+    //pageidx=0;
+    pageidx=1;
+    _S2.TS.dtf=1; // move to date
+    
+      Tft.fillScreen();
+      dispSetTime();
+      hiLightDigit(WHITE);    
+
+    dispStat("TIME STR");
+  } else {
+    
+    hiLightDigit(BLACK);    
+    dispStat("DATE STR");
+  }
+}
+
+void hiLightDigit(uint16_t color) {
+  uint8_t x=pageidx;
+  uint8_t y=0;
+  /*
+  if(pageidx>4) { // date
+    x-=4;
+    y++;
+  } */
+  //uint8_t d=(pageidx>0 && pageidx<3)?pageidx-1:pageidx;
+  uint8_t d=(x>0 && x<3)? x-1 :
+            (x>4 ) ? x+1 :x;
+  Tft.setColor(color);
+  Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, WS_SCREEN_TIME_LINE_Y+y*WS_CHAR_TIME_SET_SZ*FONT_Y, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);  
 }
 
 void dispErr(uint8_t err) {
@@ -560,20 +607,6 @@ void dispStat(const char *pbuf) {
   line_setpos(0, WS_SCREEN_STAT_LINE_Y); line_printn(pbuf); 
   if(mHist.getLatestSid()!=0xF)
     line_printn(itoas(mHist.getLatestSid()));
-}
-
-void hiLightDigit(uint16_t color) {
-  uint8_t x=pageidx;
-  uint8_t y=0;
-  if(pageidx>4) { // date
-    x-=4;
-    y++;
-  }
-  //uint8_t d=(pageidx>0 && pageidx<3)?pageidx-1:pageidx;
-  uint8_t d=(x>0 && x<3)? x-1 :
-            (x>4 ) ? x+1 :x;
-  Tft.setColor(color);
-  Tft.drawRectangle(FONT_SPACE*WS_CHAR_TIME_SET_SZ*d, WS_SCREEN_TIME_LINE_Y+y*WS_CHAR_TIME_SET_SZ*FONT_Y, FONT_SPACE*WS_CHAR_TIME_SET_SZ, FONT_Y*WS_CHAR_TIME_SET_SZ);  
 }
 
 
