@@ -245,8 +245,11 @@ void loop()
      if(btcnt2==WS_BUT_CLICK) processShortRightClick(); 
      btcnt2=0;     
    }
-
-   if(!TIME_SET_MODE()) { // in edit mode
+   if(TIME_SET_MODE()) { // in edit mode
+     if(flags&WS_FLAG_NEEDUPDATE)
+       updateScreen();     
+   } 
+   else { // not in edit mode
      if(flags&WS_FLAG_ONDATAUPDATE)
        dispStat("READ ");
      if(flags&(WS_FLAG_NEEDUPDATE|WS_FLAG_ONDATAUPDATE))
@@ -367,7 +370,6 @@ void updateScreen() {
       printStat();    
       break;
     case WS_UI_SET: 
-      //updateScreenTime(true);  
       dispSetTime();
       break;
     default: break;
