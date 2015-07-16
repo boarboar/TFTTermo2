@@ -171,9 +171,6 @@ TFT Tft;
 NRF24 nrf24;
 RTC_DS1302 RTC;
 
-//static uint8_t p_time[2]={0xFF, 0xFF};
-//static uint8_t p_to[2]={0xFF, 0xFF};
-
 void setup()
 {
   delay(100);
@@ -303,7 +300,6 @@ void processLongClick() {
       timeEditOn();
     } else {
       timeStore();
-      //updateScreenTime(true);
     }
   } 
 }
@@ -327,7 +323,6 @@ void processShortRightClick() {
     case WS_UI_SET:
       if(pageidx) {
         timeUp(pageidx-1, WS_CHAR_TIME_SET_SZ);
-        //hiLightDigit(WHITE);
       }   
      break;
    default:break;  
@@ -407,38 +402,21 @@ void dispMain(uint8_t sid) {
 }
 
 void updateScreenTime(bool reset) {
-  uint8_t sz=0;
-  uint8_t dsz;
-  uint16_t dy;
-  uint16_t dx;
+  if(uilev!=WS_UI_MAIN) return;
+  DateTime now = RTC.now();
   if(reset) { _S2.TT.p_time[0]=_S2.TT.p_time[1]=0xFF;}
-  if(uilev==WS_UI_MAIN) {
-    sz=WS_CHAR_TIME_SZ;
-    dsz=WS_CHAR_TIME_SZ/2;
-    dy=0;
-    dx=WS_CHAR_TIME_SZ*FONT_SPACE*8;
-    for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
-  }/* else if(uilev==WS_UI_SET) {
-      if(!pageidx) {
-        dsz=sz=WS_CHAR_TIME_SET_SZ; // draw only until entering edit mode  
-        dx=0;
-        dy=WS_CHAR_TIME_SET_SZ*FONT_Y;
-      } 
-  }*/
+  for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
   
-  if(sz) {
-    DateTime now = RTC.now();
-    if(/*reset || */now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
-      printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, sz);   
+  if(/*reset || */now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
+      printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
       _S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute();
-    }        
-    if(reset || now.hour()!=_S2.TT.p_time[0]) {
-      Tft.setSize(dsz);
+  }        
+  if(reset || now.hour()!=_S2.TT.p_time[0]) {
+      Tft.setSize(WS_CHAR_TIME_SZ/2);
       Tft.setColor(YELLOW);
-      line_setpos(dx, dy);
+      line_setpos(WS_CHAR_TIME_SZ*FONT_SPACE*8, 0);
       printDate(now);
-    }            
-  } 
+  }            
 }
 
 // buf 5
@@ -504,7 +482,7 @@ void printDate(const DateTime& pDT) {
 }
 
 void dispSetTime() {
-  Tft.fillScreen();
+  //Tft.fillScreen();
   DateTime now = RTC.now();
   if(pageidx==0 || _S2.TS.dtf==0) { // idle or edit time
     printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
@@ -514,25 +492,24 @@ void dispSetTime() {
     Tft.setColor(YELLOW);
     line_setpos(0, pageidx==0 ? WS_CHAR_TIME_SET_SZ*FONT_Y : 0);
     printDate(now);
-  }  
+  } 
+  if(pageidx) hiLightDigit(WHITE); 
 }
 
 void timeEditOn() {
   pageidx=1;
   DateTime now=RTC.now();
-  //_S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute(); 
   _S2.TS.dt[0]=now.hour(); _S2.TS.dt[1]=now.minute(); 
   _S2.TS.dtf=0; // time edit
-        dispSetTime();
-
-  hiLightDigit(WHITE);
+  //dispSetTime();
+  //hiLightDigit(WHITE);
   dispStat("EDT T ON");
+  flags|=WS_FLAG_NEEDUPDATE;
 }
 
 void timeEditMove() {
   dispStat("EDIT MOV");
   hiLightDigit(BLACK);
-  //if(++pageidx>WS_TIMESET_DIG_T) pageidx=1;
   ++pageidx;
   if(_S2.TS.dtf==0) { if(pageidx>WS_TIMESET_DIG_T) pageidx=1; }
   else { if(pageidx>WS_TIMESET_DIG_D) pageidx=1; }
@@ -540,60 +517,55 @@ void timeEditMove() {
 }
 
 void timeUp(uint8_t dig, int sz) {
+  const uint8_t maxv_t[2]={24, 60};
+  const uint8_t maxv_d[3]={32, 13, 32};
+
   //dig=0..3
   //hhmm
   //0123
-  if(dig>3) return;
-  uint8_t ig=dig/2; // 0-h, 1-m
+  //ddmmyy
+  //012345
+  
+  //if(dig>3) return;
+  if(dig>5) return;
+  uint8_t ig=dig/2; // 0-h, 1-m ; 0-d, 1-m, 2-y
   uint8_t id=(dig+1)%2; // 1-high dec, 0 - low dec 
-  //uint8_t val=_S2.TT.p_time[ig];
   uint8_t val=_S2.TS.dt[ig];
-  const uint8_t maxv[2]={24, 60};
   uint8_t pos=ig*3; uint8_t disp=0;
+  const uint8_t *maxv=_S2.TS.dtf==0 ? maxv_t : maxv_d;
   if(id) { val+=10; if(val>maxv[ig]) val=val%10; disp=val/10;}  
   else { val=(val/10)*10+((val%10)+1)%10; if(val>maxv[ig]) val=(val/10)*10;  pos++; disp=val%10;} 
   Tft.setSize(sz);
   Tft.setColor(GREEN);
   Tft.drawCharLowRAM('0'+disp,sz*FONT_SPACE*pos, WS_SCREEN_TIME_LINE_Y);
-  //_S2.TT.p_time[ig]=val; 
   _S2.TS.dt[ig]=val; 
   hiLightDigit(WHITE);
 }
 
 void timeStore() {
   DateTime set=RTC.now();
-  //set.setTime(_S2.TT.p_time[0], _S2.TT.p_time[1], 0);
   if(_S2.TS.dtf==0) { // time store
     set.setTime(_S2.TS.dt[0], _S2.TS.dt[1], 0);
     RTC.adjust(set); 
     hiLightDigit(BLACK);
-    //pageidx=0;
     pageidx=1;
     _S2.TS.dtf=1; // move to date
-    
-      //Tft.fillScreen();
-      dispSetTime();
-      hiLightDigit(WHITE);    
-
+    //Tft.fillScreen();
+    //dispSetTime();
+    //hiLightDigit(WHITE);    
     dispStat("TIME STR");
   } else {
     pageidx=0;
     //hiLightDigit(BLACK);
-      dispSetTime();
-    
+    //dispSetTime();    
     dispStat("DATE STR");
   }
+  flags|=WS_FLAG_NEEDUPDATE;
 }
 
 void hiLightDigit(uint16_t color) {
   uint8_t x=pageidx;
   uint8_t y=0;
-  /*
-  if(pageidx>4) { // date
-    x-=4;
-    y++;
-  } */
-  //uint8_t d=(pageidx>0 && pageidx<3)?pageidx-1:pageidx;
   uint8_t d=(x>0 && x<3)? x-1 :
             (x>4 ) ? x+1 :x;
   Tft.setColor(color);
