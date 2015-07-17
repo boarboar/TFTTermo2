@@ -54,6 +54,12 @@ void DateTime::setTime (uint8_t hour, uint8_t min, uint8_t sec) {
     ss = sec;
 }
 
+void DateTime::setDate (uint8_t day, uint8_t month, uint8_t year) {
+    d = day;
+    m = month;
+    yOff = year;
+}
+
 uint8_t DateTime::dayOfWeek() const {    
     uint16_t day = date2days(yOff, m, d);
     return (day + 6) % 7; // Jan 1, 2000 is a Saturday, i.e. returns 6

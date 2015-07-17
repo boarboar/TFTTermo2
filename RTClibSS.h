@@ -10,6 +10,7 @@ public:
     DateTime (uint8_t year, uint8_t month, uint8_t day,
                 uint8_t hour =0, uint8_t min =0, uint8_t sec =0);
     void setTime(uint8_t hour =0, uint8_t min =0, uint8_t sec =0);    
+    void setDate(uint8_t day, uint8_t month, uint8_t year);    
     //void shiftMins(int16_t m);    
     //DateTime (const char* date, const char* time);
     

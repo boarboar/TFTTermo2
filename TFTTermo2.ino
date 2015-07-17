@@ -484,7 +484,6 @@ void printDate(const DateTime& pDT) {
 }
 
 void dispSetTime() {
-  //Tft.fillScreen();
   DateTime now = RTC.now();
   if(pageidx==0 || _S2.TS.dtf==0) { // idle or edit time
     printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SET_SZ);   
@@ -503,8 +502,6 @@ void timeEditOn() {
   DateTime now=RTC.now();
   _S2.TS.dt[0]=now.hour(); _S2.TS.dt[1]=now.minute(); 
   _S2.TS.dtf=0; // time edit
-  //dispSetTime();
-  //hiLightDigit(WHITE);
   dispStat("EDT T ON");
   flags|=WS_FLAG_NEEDUPDATE;
 }
@@ -528,7 +525,6 @@ void timeUp(uint8_t dig, int sz) {
   //ddmmyy
   //012345
   
-  //if(dig>3) return;
   if(dig>5) return;
   uint8_t ig=dig/2; // 0-h, 1-m ; 0-d, 1-m, 2-y
   uint8_t id=(dig+1)%2; // 1-high dec, 0 - low dec 
@@ -549,19 +545,18 @@ void timeStore() {
   if(_S2.TS.dtf==0) { // time store
     set.setTime(_S2.TS.dt[0], _S2.TS.dt[1], 0);
     RTC.adjust(set); 
-    hiLightDigit(BLACK);
+    //hiLightDigit(BLACK);
     pageidx=1;
     _S2.TS.dtf=1; // move to date
-    //Tft.fillScreen();
-    //dispSetTime();
-    //hiLightDigit(WHITE);    
+    _S2.TS.dt[0]=set.day(); _S2.TS.dt[1]=set.month(); _S2.TS.dt[2]=set.year();
     dispStat("TIME STR");
   } else {
     pageidx=0;
-    //hiLightDigit(BLACK);
-    //dispSetTime();    
+    set.setDate(_S2.TS.dt[0], _S2.TS.dt[1], _S2.TS.dt[2]);
+    RTC.adjust(set); 
     dispStat("DATE STR");
   }
+  delay(500);
   flags|=WS_FLAG_NEEDUPDATE;
 }
 
