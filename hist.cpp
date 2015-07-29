@@ -46,7 +46,6 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
         hist[i].temp=(hist[i].temp+hist[j].temp)/2;
         hist[i].vcc=(hist[i].vcc+hist[j].vcc)/2;
         mins_th=hist[i].mins=hist[i].mins+hist[j].mins;
-        //mins_th+=10; // this constant requires some rethinking !!!!
         if(mins_th<60) mins_th+=10;
         else mins_th+=mins_th/4;
         for(; j<TH_HIST_SZ-1; j++) hist[j]=hist[j+1]; // shift tail left // reuse cnt 
@@ -57,7 +56,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   for(i=TH_HIST_SZ-1; i>0; i--) hist[i]=hist[i-1]; // shift all right
   // add head
   hist[0].temp=temp/TH_HIST_DV_T;
-  hist[0].vcc=vcc/TH_HIST_DV_V;
+  hist[0].vcc=(vcc-TH_HIST_BASE_V)/TH_HIST_DV_V;
   hist[0].mins=mins;
   hist[0].sid=sid;
   acc_prev_time_m[sid-1]=millis()/60000L;
