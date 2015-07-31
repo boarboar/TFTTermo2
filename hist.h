@@ -5,8 +5,10 @@
 #define TH_SID_SZ  2
 #define TH_HIST_DV_T  5
 //#define TH_HIST_DV_V  2
-#define TH_HIST_DV_V  32
-#define TH_HIST_BASE_V  224 //2.24v
+//#define TH_HIST_DV_V  32
+//#define TH_HIST_BASE_V  224 //2.24v
+#define TH_HIST_DV_V    18  // ca (512-base)/16
+#define TH_HIST_BASE_V  240 //2.40v
 #define TH_HIST_VAL_T 0
 #define TH_HIST_VAL_V 1
 
