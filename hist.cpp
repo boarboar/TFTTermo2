@@ -28,6 +28,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   uint16_t mins_th, mins;
   if(sid>TH_SID_SZ) return false;
   mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage  
+  if(!mins) return false; // 0-duration measurement - assume sensor retries
   // compress 
   i=0; mins_th=mins+10; // start at head with 15 minutes   
   while(mins_th<TH_ROLLUP_THR) {
@@ -64,6 +65,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
 }
 
 TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
+  if(interval_m(acc_prev_time_m[sid-1])>TH_VALID_THR) return NULL; // stale data
   uint8_t i;
   pos++;
   for(i=0; i<TH_HIST_SZ && !TH_ISEMPTY(i); i++) {
@@ -73,7 +75,7 @@ TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
     }
   }
   if(pos) return NULL;
-  else return hist+i;
+  else return hist+i; // TODO: here add stale data fictive entry detection, return NULL 
 }
 
 uint8_t  TempHistory::getHeadDelay(uint8_t sid) { 

@@ -408,17 +408,18 @@ void updateScreenTime(bool reset) {
   DateTime now = RTC.now();
   if(reset) { _S2.TT.p_time[0]=_S2.TT.p_time[1]=0xFF;}
   for(uint8_t i=1; i<=TH_SID_SZ; i++) dispTimeoutTempM(i, reset);
-  
-  if(/*reset || */now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
-      printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
-      _S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute();
-  }        
+
   if(reset || now.hour()!=_S2.TT.p_time[0]) {
       Tft.setSize(WS_CHAR_TIME_SZ/2);
       Tft.setColor(YELLOW);
       line_setpos(WS_CHAR_TIME_SZ*FONT_SPACE*8, 0);
       printDate(now);
   }            
+  
+  if(/*reset || */now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
+      printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
+      _S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute();
+  }        
 }
 
 // buf 5

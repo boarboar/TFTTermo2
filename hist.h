@@ -1,13 +1,14 @@
 
 // effective storage is TH_HIST_SZ-1
-//#define TH_HIST_SZ  33
-#define TH_HIST_SZ  35
+//#define TH_HIST_SZ  35
+//#define TH_HIST_SZ  44
+#define TH_HIST_SZ  46
 #define TH_SID_SZ  2
 #define TH_HIST_DV_T  5
 //#define TH_HIST_DV_V  2
 //#define TH_HIST_DV_V  32
 //#define TH_HIST_BASE_V  224 //2.24v
-#define TH_HIST_DV_V    18  // ca (512-base)/16
+#define TH_HIST_DV_V    17  // ca (512-base)/16
 #define TH_HIST_BASE_V  240 //2.40v
 #define TH_HIST_VAL_T 0
 #define TH_HIST_VAL_V 1
@@ -16,6 +17,7 @@
 //#define TH_SEMPTY 0xFFF
 #define TH_SEMPTY 0x3FF
 #define TH_ROLLUP_THR 375 // must be less than TH_SEMPTY
+#define TH_VALID_THR  120 // 2hrs
 
 #define TH_SETEMPTY(I) (hist[I].mins=TH_SEMPTY)
 #define TH_ISEMPTY(I)  (hist[I].mins==TH_SEMPTY)
@@ -35,7 +37,7 @@ public:
     */
     
     uint16_t mins : 10; // mins since previous put (0..254*4). 0x3FF=empty slot/ Max value = 0x3FE=1022
-    uint8_t sid : 2;  // src 0..3
+    uint8_t sid : 2;  // src 0..3. 0 - not valid?
     uint8_t vcc : 4;    
     int8_t  temp;    
     
