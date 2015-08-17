@@ -675,10 +675,12 @@ void chartHist() {
     x0=y0=0;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
-      _S.CV.y1=(int32_t)(_S2.CMM.maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint)+CHART_TOP;
-      _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
-      if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
-      x0=_S.CV.x1; y0=_S.CV.y1;
+      if(!TH_ISGAP_P(mHist.getPrev())) {
+        _S.CV.y1=(int32_t)(_S2.CMM.maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint)+CHART_TOP;
+        _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
+        if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
+        x0=_S.CV.x1; y0=_S.CV.y1;
+      }
     } while(mHist.movePrev() && x0>0);
   } //for sid    
  
@@ -729,8 +731,10 @@ void chartHist60()
       _S.HV.acc=0;
       cnt=0;     
     }    
-    _S.HV.acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
-    cnt++;          
+   if(!TH_ISGAP_P(mHist.getPrev())) { 
+      _S.HV.acc+=mHist.getPrev()->getVal(TH_HIST_VAL_T);
+      cnt++;          
+   }
   } while(mHist.isNotOver() && islot<DUR_24);   
   } // inner scope
   } // hist scope  
@@ -773,9 +777,11 @@ void prepChart(uint8_t  s, uint8_t type, uint16_t m) {
     mHist.iterBegin(sid0);
     if(mHist.movePrev()) {  
       do {
-        int16_t t = mHist.getPrev()->getVal(type);
-        if(t>_S2.CMM.maxt) _S2.CMM.maxt=t;
-        if(t<_S2.CMM.mint) _S2.CMM.mint=t;
+        if(!TH_ISGAP_P(mHist.getPrev())) {
+          int16_t t = mHist.getPrev()->getVal(type);
+          if(t>_S2.CMM.maxt) _S2.CMM.maxt=t;
+          if(t<_S2.CMM.mint) _S2.CMM.mint=t;
+        }
       } while(mHist.movePrev() && mHist.getPrevMinsBefore()<m);
     }
   } while(++sid0<=sid1);

@@ -34,7 +34,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
   while(mins_th<TH_ROLLUP_THR) {
     j=0; // as a counter
     ii[0]=ii[1]=0; // not necessary
-    while(i<TH_HIST_SZ && !TH_ISEMPTY(i)) {
+    while(i<TH_HIST_SZ && !TH_ISEMPTY(i) && !TH_ISGAP(i)) {
       if(hist[i].sid==sid && hist[i].mins<mins_th) {
         ii[0]=ii[1]; ii[1]=i;
         j++; 
@@ -75,7 +75,8 @@ TempHistory::wt_msg_hist *TempHistory::getData(uint8_t sid, uint8_t pos) {
     }
   }
   if(pos) return NULL;
-  else return hist+i; // TODO: here add stale data fictive entry detection, return NULL 
+  if(TH_ISGAP(i)) return NULL;
+  return hist+i; // TODO: here add stale data fictive entry detection, return NULL 
 }
 
 uint8_t  TempHistory::getHeadDelay(uint8_t sid) { 
@@ -103,7 +104,10 @@ boolean TempHistory::movePrev() {
   iter_ptr++;
   while(iter_ptr<TH_HIST_SZ && !TH_ISEMPTY(iter_ptr)) {
     if(iter_sid==0xFF || hist[iter_ptr].sid==iter_sid) {
-      iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
+      if(!TH_ISGAP(iter_ptr))
+        iter_mbefore+=hist[iter_ptr].mins; // points to the moment iterated average started to accumulate 
+      else  
+        iter_mbefore+=TH_GAP;
       return true;
     }
     iter_ptr++;

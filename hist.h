@@ -18,9 +18,13 @@
 #define TH_SEMPTY 0x3FF
 #define TH_ROLLUP_THR 375 // must be less than TH_SEMPTY
 #define TH_VALID_THR  120 // 2hrs
+#define TH_GAP        60 // 1hrs, for test only
 
-#define TH_SETEMPTY(I) (hist[I].mins=TH_SEMPTY)
-#define TH_ISEMPTY(I)  (hist[I].mins==TH_SEMPTY)
+#define TH_SETEMPTY(I) (hist[(I)].mins=TH_SEMPTY)
+#define TH_ISEMPTY(I)  (hist[(I)].mins==TH_SEMPTY)
+
+#define TH_ISGAP(I)  (hist[(I)].mins==0)
+#define TH_ISGAP_P(P)  ((P)->mins==0)
 
 // uint16_t max: 65535 mins = 1092 hours = 45 days
 
