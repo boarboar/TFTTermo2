@@ -343,7 +343,7 @@ void updateScreen() {
   
   switch(uilev) {
     case WS_UI_MAIN: {           
-     if(flags&WS_FLAG_ONDATAUPDATE) dispMain(mHist.getLatestSid());
+     if(flags&WS_FLAG_ONDATAUPDATE && mHist.getLatestSid()) dispMain(mHist.getLatestSid());
      else {
        for(uint8_t i=1; i<=TH_SID_SZ; i++) dispMain(i);
        updateScreenTime(true);   
@@ -675,7 +675,8 @@ void chartHist() {
     x0=y0=0;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
-      if(!TH_ISGAP_P(mHist.getPrev())) {
+      if(TH_ISGAP_P(mHist.getPrev())) x0=0; // break line
+      else {
         _S.CV.y1=(int32_t)(_S2.CMM.maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint)+CHART_TOP;
         _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
         if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
