@@ -22,13 +22,17 @@ void TempHistory::init() {
   hist[0].sid=0xF;
 }
 
-boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid) {
+boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap) {
   uint8_t i, j;
   uint8_t ii[2];
   uint16_t mins_th, mins;
   if(sid>TH_SID_SZ) return false;
-  mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage  
-  if(!mins) return false; // 0-duration measurement - assume sensor retries
+  if(gap) // add gap on sensor timeout
+    mins=0;
+  else {  // normal sensor reading
+    mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage  
+    if(!mins) return false; // 0-duration measurement - assume sensor retries
+  }
   // compress 
   i=0; mins_th=mins+10; // start at head with 15 minutes   
   while(mins_th<TH_ROLLUP_THR) {
@@ -127,4 +131,15 @@ uint8_t TempHistory::check() {
   if(i==TH_HIST_SZ) return 0;
   while(i<TH_HIST_SZ && TH_ISEMPTY(i)) i++;
   return TH_HIST_SZ-i;
+}
+
+uint8_t TempHistory::timeout() {
+  uint8_t tc=0; 
+  for(uint8_t sid=0; sid<TH_SID_SZ; sid++) {
+      if(interval_m(acc_prev_time_m[sid])>TH_VALID_THR) {
+        addAcc(0, 0, sid+1, 0); // add gap 
+        tc++;
+      }      
+   }
+  return tc; 
 }

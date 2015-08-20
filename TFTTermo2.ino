@@ -258,12 +258,16 @@ void loop()
      if(++disp_cnt>=WS_DISP_CNT) { // 0.5 sec screen update   
        disp_cnt=0;   
        if(inact_cnt) inact_cnt--;
+       /*
        if(!(alarms&WS_ALR_TO) && mHist.getHeadDelay(1)>WS_SENS_TIMEOUT_M) { // Alarm condition on no-data timeout, at the moment for SID1 only....           
          alarms |= WS_ALR_TO;
          if(uilev==WS_UI_MAIN) updateScreen();       
        }
+       */
+       if(mHist.timeout() && uilev==WS_UI_MAIN) updateScreen();
        if(uilev==WS_UI_MAIN) updateScreenTime(false);       
      }     
+     
    }
  } // UI cycle
  
@@ -416,7 +420,7 @@ void updateScreenTime(bool reset) {
       printDate(now);
   }            
   
-  if(/*reset || */now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
+  if(now.hour()!=_S2.TT.p_time[0] || now.minute()!=_S2.TT.p_time[1]) {
       printTime2(now, 0, WS_SCREEN_TIME_LINE_Y, WS_CHAR_TIME_SZ);   
       _S2.TT.p_time[0]=now.hour(); _S2.TT.p_time[1]=now.minute();
   }        
@@ -861,7 +865,7 @@ void line_printn(const char* pbuf) {
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   if(DS18_MEAS_FAIL==pmsg->temp) return 1;
   msgcnt++;
-  mHist.addAcc(pmsg->temp, pmsg->vcc, pmsg->sid);
+  mHist.addAcc(pmsg->temp, pmsg->vcc, pmsg->sid, 0);
   return 0;
 }
 

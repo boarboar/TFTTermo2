@@ -48,7 +48,7 @@ public:
     };
     TempHistory();
     void init();
-    boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid);
+    boolean addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap);
     uint8_t getSz();
     wt_msg_hist *getData(uint8_t sid, uint8_t pos);
     void iterBegin(uint8_t sid);
@@ -60,6 +60,7 @@ public:
     uint8_t  getHeadDelay(uint8_t sid);
     inline uint8_t  getLatestSid() {return hist[0].sid; }
     uint8_t check(); // check if corrupted 
+    uint8_t timeout(); // check if sensor timeout 
     static uint8_t interval_m(uint8_t prev);
 protected:
     uint16_t compress(uint8_t level);
