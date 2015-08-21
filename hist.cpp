@@ -137,7 +137,7 @@ uint8_t TempHistory::timeout() {
   uint8_t tc=0; 
   for(uint8_t sid=0; sid<TH_SID_SZ; sid++) {
       if(interval_m(acc_prev_time_m[sid])>TH_VALID_THR) {
-        addAcc(0, 0, sid+1, 0); // add gap 
+        addAcc(0, 0, sid+1, 1); // add gap 
         tc++;
       }      
    }
