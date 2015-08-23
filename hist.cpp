@@ -32,7 +32,7 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap)
   else {  // normal sensor reading
     mins=interval_m(acc_prev_time_m[sid-1]); //time lapsed from previous storage  
     if(!mins) return false; // 0-duration measurement - assume sensor retries
-  }
+  
   // compress 
   i=0; mins_th=mins+10; // start at head with 15 minutes   
   while(mins_th<TH_ROLLUP_THR) {
@@ -57,7 +57,8 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap)
         TH_SETEMPTY(TH_HIST_SZ-1); // now vacant
       } else break;
       
-  } 
+  }
+  }    
   for(i=TH_HIST_SZ-1; i>0; i--) hist[i]=hist[i-1]; // shift all right
   // add head
   hist[0].temp=temp/TH_HIST_DV_T;
@@ -136,7 +137,7 @@ uint8_t TempHistory::check() {
 uint8_t TempHistory::timeout() {
   uint8_t tc=0; 
   for(uint8_t sid=0; sid<TH_SID_SZ; sid++) {
-      if(interval_m(acc_prev_time_m[sid])>TH_VALID_THR) {
+      if(interval_m(acc_prev_time_m[sid])>TH_GAP) {
         addAcc(0, 0, sid+1, 1); // add gap 
         tc++;
       }      
