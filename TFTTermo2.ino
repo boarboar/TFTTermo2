@@ -117,6 +117,9 @@
 const char *addr="wserv";
 
 const char *lnames[] = {"", "Stat", "Hist", "Temp", "Day", "Vcc", "Set"};
+const char *dummy_t = " --.-";
+const char *dummy_v = "-.--";
+
 static const uint16_t cc[TH_SID_SZ]={CYAN, YELLOW};  
 
 struct wt_msg {
@@ -389,7 +392,7 @@ void dispMain(uint8_t sid) {
     int16_t t;
     Tft.setColor(mHist.getHeadDelay(sid)>WS_SENS_TIMEOUT_M ? RED : GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
-    t=Tft.drawString(l ? printTemp(l->getVal(TH_HIST_VAL_T)) : " --.-", 0, y);
+    t=Tft.drawString(l ? printTemp(l->getVal(TH_HIST_VAL_T)) : dummy_t, 0, y);
     Tft.drawString("  ", t, y); // clear space
     Tft.setSize(WS_CHAR_TEMP_SZ/2);
     t=Tft.drawString("o", t, y); // grad
@@ -402,7 +405,7 @@ void dispMain(uint8_t sid) {
   }
   if(!(flags&WS_FLAG_ONDATAUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_V)!=p->getVal(TH_HIST_VAL_V))) {
     line_setpos(WS_SCREEN_SIZE_X-WS_CHAR_DEF_SIZE*FONT_SPACE*5, y); 
-    line_printn(l ? printVcc(l->getVal(TH_HIST_VAL_V)) : "-.--"); 
+    line_printn(l ? printVcc(l->getVal(TH_HIST_VAL_V)) : dummy_v); 
     line_printn("v");
   }     
 }
@@ -626,11 +629,11 @@ uint8_t printHist(uint8_t sid, uint8_t idx) {
     line_setcharpos(4);
     line_printn(itoas(h->sid)); 
     line_setcharpos(6);
-    line_printn(printTemp(h->getVal(TH_HIST_VAL_T))); 
+    line_printn(h->mins ? printTemp(h->getVal(TH_HIST_VAL_T)) : dummy_t); 
     line_setcharpos(13);
-    line_printn(printVcc(h->getVal(TH_HIST_VAL_V))); 
+    line_printn(h->mins ? printVcc(h->getVal(TH_HIST_VAL_V)) : dummy_v); 
     line_setcharpos(18);
-    line_print(itoa(h->mins, _S.buf, 10));
+    line_print(itoa(h->mins ? h->mins : TH_GAP, _S.buf, 10));
     i++;    
     } while(mHist.movePrev() && line_getpos()<230);
   return i;  
@@ -679,13 +682,13 @@ void chartHist() {
     x0=y0=0;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
-      if(TH_ISGAP_P(mHist.getPrev())) x0=0; // break line
-      else {
+      _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
+      if(!TH_ISGAP_P(mHist.getPrev())) {
         _S.CV.y1=(int32_t)(_S2.CMM.maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint)+CHART_TOP;
-        _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
         if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
-        x0=_S.CV.x1; y0=_S.CV.y1;
+        y0=_S.CV.y1;
       }
+      x0=_S.CV.x1; 
     } while(mHist.movePrev() && x0>0);
   } //for sid    
  
