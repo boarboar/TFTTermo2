@@ -37,13 +37,15 @@
 #define WS_ALR_BAD_TEMP 0x4
 #define WS_ALR_TO     0x8
 #define WS_ALR_LOWVCC 0x16
+#define WS_ALR_BAD_LENGTH 0x32
 
 #define WS_ALR_WFAIL_IDX  0
 #define WS_ALR_BADMSG_IDX 1
 #define WS_ALR_BAD_TEMP_IDX 2
 #define WS_ALR_TO_IDX     3
 #define WS_ALR_LOWVCC_IDX 4
-#define WS_ALR_LAST_IDX 4
+#define WS_ALR_BAD_LENGTH_IDX 5
+#define WS_ALR_LAST_IDX 5
 
 #define WS_SENS_TIMEOUT_M 30 // minutes
 
@@ -864,13 +866,14 @@ void line_printn(const char* pbuf) {
 
 /****************** HIST ****************/
 
-
+/*
 uint8_t addHistAcc(struct wt_msg *pmsg) {
   if(DS18_MEAS_FAIL==pmsg->temp) return 1;
   msgcnt++;
   mHist.addAcc(pmsg->temp, pmsg->vcc, pmsg->sid, 0);
   return 0;
 }
+*/
 
 char *itoas(uint8_t i) {
   return itoa(i, _S.buf, 10);
@@ -890,7 +893,8 @@ uint8_t radioSetup() {
   else if (!nrf24.setChannel(WS_CHAN)) err=2;
   else if (!nrf24.setThisAddress((uint8_t*)addr, strlen(addr))) err=3;
   else if (!nrf24.setPayloadSize(sizeof(wt_msg))) err=4;
-  else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPower0dBm)) err=5;          
+  //else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPower0dBm)) err=5;          
+  else if (!nrf24.setRF(NRF24::NRF24DataRate250kbps, NRF24::NRF24TransmitPowerm6dBm)) err=5;          
   else { 
     nrf24.spiWriteRegister(NRF24_REG_00_CONFIG, nrf24.spiReadRegister(NRF24_REG_00_CONFIG)|NRF24_MASK_TX_DS|NRF24_MASK_MAX_RT); // only DR interrupt
     err=0;
@@ -913,9 +917,14 @@ uint8_t radioRead() {
   } else {
     flags &= ~WS_FLAG_ONCEFAIL;
     if(!nrf24.recv((uint8_t*)&msg, &len)) { err=7; alarms |= WS_ALR_WFAIL;}
-    else if(WS_MSG_TEMP != msg.msgt) { err=8; alarms |= WS_ALR_BADMSG;}
-    else if(0!=addHistAcc(&msg)) {err=9;  alarms |= WS_ALR_BAD_TEMP;} // at the moment 
-    else {err=0; alarms = 0;} 
+    else if(sizeof(msg) != len) { err=8; alarms |= WS_ALR_BAD_LENGTH;}
+    else if(WS_MSG_TEMP != msg.msgt) { err=9; alarms |= WS_ALR_BADMSG;}
+    else if(DS18_MEAS_FAIL == msg.msgt) {err=10;  alarms |= WS_ALR_BAD_TEMP;} // at the moment 
+    else {
+      msgcnt++;
+      mHist.addAcc(msg.temp, msg.vcc, msg.sid, 0);
+      err=0; alarms = 0;
+    } 
   }
   return err;
 }
