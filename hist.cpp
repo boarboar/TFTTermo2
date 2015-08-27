@@ -19,7 +19,7 @@ void TempHistory::init() {
   uint8_t i;
   for(i=0; i<TH_HIST_SZ; i++) { TH_SETEMPTY(i); hist[i].temp=0; hist[i].vcc=0; hist[i].sid=0; }
   for(i=0; i<TH_SID_SZ; i++) acc_prev_time_m[i]=millis()/60000L;
-  hist[0].sid=0xF;
+  //hist[0].sid=0xF; // why?
 }
 
 boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap) {

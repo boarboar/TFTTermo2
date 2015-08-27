@@ -47,7 +47,7 @@
 #define WS_ALR_BAD_LENGTH_IDX 5
 #define WS_ALR_LAST_IDX 5
 
-#define WS_SENS_TIMEOUT_M 30 // minutes
+//#define WS_SENS_TIMEOUT_M 30 // minutes
 
 #define DS18_MEAS_FAIL	9999  // Temporarily!
 #define DS18_MEAS_NONE  -999
@@ -392,7 +392,8 @@ void dispMain(uint8_t sid) {
   uint16_t y=WS_SCREEN_TEMP_LINE_Y+(FONT_Y*WS_CHAR_TEMP_SZ+WS_SCREEN_TEMP_LINE_PADDING)*(sid-1);
   if(!(flags&WS_FLAG_ONDATAUPDATE) || !l || !p || (l->getVal(TH_HIST_VAL_T)!=p->getVal(TH_HIST_VAL_T))) {  
     int16_t t;
-    Tft.setColor(mHist.getHeadDelay(sid)>WS_SENS_TIMEOUT_M ? RED : GREEN);
+    //Tft.setColor(mHist.getHeadDelay(sid)>WS_SENS_TIMEOUT_M ? RED : GREEN);
+    Tft.setColor(GREEN);
     Tft.setSize(WS_CHAR_TEMP_SZ);
     t=Tft.drawString(l ? printTemp(l->getVal(TH_HIST_VAL_T)) : dummy_t, 0, y);
     Tft.drawString("  ", t, y); // clear space
@@ -866,14 +867,6 @@ void line_printn(const char* pbuf) {
 
 /****************** HIST ****************/
 
-/*
-uint8_t addHistAcc(struct wt_msg *pmsg) {
-  if(DS18_MEAS_FAIL==pmsg->temp) return 1;
-  msgcnt++;
-  mHist.addAcc(pmsg->temp, pmsg->vcc, pmsg->sid, 0);
-  return 0;
-}
-*/
 
 char *itoas(uint8_t i) {
   return itoa(i, _S.buf, 10);

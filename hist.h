@@ -17,7 +17,7 @@
 //#define TH_SEMPTY 0xFFF
 #define TH_SEMPTY 0x3FF
 #define TH_ROLLUP_THR 375 // must be less than TH_SEMPTY
-#define TH_VALID_THR  120 // 2hrs
+#define TH_VALID_THR  60 // 1hr
 #define TH_GAP        60 // 1hrs, for test only
 
 #define TH_SETEMPTY(I) (hist[(I)].mins=TH_SEMPTY)
