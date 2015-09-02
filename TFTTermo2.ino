@@ -682,13 +682,13 @@ void chartHist() {
   Tft.setThick(5);  
   for(i=1; i<=TH_SID_SZ; i++) { // i for sid
     Tft.setColor(cc[i-1]);
-    x0=y0=0;
+    x0=0; y0=-1;
     mHist.iterBegin(i); 
     if(mHist.movePrev()) do {
       _S.CV.x1=_S.CV.xr-mHist.getPrevMinsBefore()/chart_xstep_denom;
       if(!TH_ISGAP_P(mHist.getPrev())) {
         _S.CV.y1=(int32_t)(_S2.CMM.maxt-mHist.getPrev()->getVal(GETCHRT()))*CHART_HEIGHT/(_S2.CMM.maxt-_S2.CMM.mint)+CHART_TOP;
-        if(x0>0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
+        if(x0>0 && y0>=0) Tft.drawLineThickLowRAM8Bit(_S.CV.x1,_S.CV.y1,x0,y0);  
         y0=_S.CV.y1;
       }
       x0=_S.CV.x1; 

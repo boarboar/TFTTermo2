@@ -38,8 +38,8 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap)
   while(mins_th<TH_ROLLUP_THR) {
     j=0; // as a counter
     ii[0]=ii[1]=0; // not necessary
-    while(i<TH_HIST_SZ && !TH_ISEMPTY(i) && !TH_ISGAP(i)) {
-      if(hist[i].sid==sid && hist[i].mins<mins_th) {
+    while(i<TH_HIST_SZ && !TH_ISEMPTY(i)) {
+      if(hist[i].sid==sid && hist[i].mins<mins_th && !TH_ISGAP(i)) {
         ii[0]=ii[1]; ii[1]=i;
         j++; 
        }
@@ -55,10 +55,9 @@ boolean TempHistory::addAcc(int16_t temp, int16_t vcc, uint8_t sid, uint8_t gap)
         else mins_th+=mins_th/4;
         for(; j<TH_HIST_SZ-1; j++) hist[j]=hist[j+1]; // shift tail left // reuse cnt 
         TH_SETEMPTY(TH_HIST_SZ-1); // now vacant
-      } else break;
-      
-  }
-  }    
+      } else break;     
+  } // while
+  } // not gap   
   for(i=TH_HIST_SZ-1; i>0; i--) hist[i]=hist[i-1]; // shift all right
   // add head
   hist[0].temp=temp/TH_HIST_DV_T;
