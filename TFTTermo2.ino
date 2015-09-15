@@ -146,7 +146,7 @@ uint16_t msgcnt=0; // this can be rid off later
 
 // trancient vars
 
-union __attribute__((__packed__)) {
+union /*__attribute__((__packed__))*/ {
   char buf[6];
   struct { int16_t xr, x1, y1; } CV;
   struct { int16_t acc, h, y0; } HV;
@@ -154,7 +154,7 @@ union __attribute__((__packed__)) {
   struct { unsigned long ms; } MLV;
 } _S;
 
-union __attribute__((__packed__)) {
+union /*__attribute__((__packed__))*/ {
   struct { int16_t mint, maxt; } CMM; // this is for charting
   struct { uint8_t p_time[2], p_to[2]; } TT; // main screen time and timeout display
   struct { uint8_t dt[3]; uint8_t dtf;} TS; // time set
